@@ -6,6 +6,7 @@
 #include "shnmk16.h"
 #include "misaki_4x8_jisx0201.h"
 #include "misaki_gothic.h"
+#include "image.h"
 
 const int sFontHeight[3] PROGMEM = {8, 11, 16};
 const int sTextHeight[3] PROGMEM = {8, 12, 16};
@@ -581,10 +582,14 @@ void tftDispSPI::draw_rectangle(int bg, int w, int h, int x, int y, int col)
 
 void tftDispSPI::draw_image(int file, int bg, int x, int y)
 {
-  // TODO: flash内の画像を表示する
+  const uint16_t  *imagePtr = imgArray[file];
+  if (imagePtr != nullptr) {
+    mBgSpr.pushImage(x, y, imagePtr[0], imagePtr[1], &imagePtr[2]);
+    setUpdateArea(y, y+imagePtr[1]);
+  }
 }
 
 void tftDispSPI::draw_image2(int file, int bg, int fol, int x, int y)
 {
-  // TODO: flash内の画像を表示する
+  // image2は未使用
 }
