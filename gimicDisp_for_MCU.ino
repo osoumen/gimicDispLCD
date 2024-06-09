@@ -54,7 +54,7 @@ void loop() {
   //   parser.ParseByte(Serial.read());
   // }
 
-  if ((micros() - myTime) > 16666) {
+  if ((millis() - myTime) > 10) {
     if (tft.updateContent())
       myTime = millis();
   }
