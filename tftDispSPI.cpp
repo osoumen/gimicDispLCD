@@ -144,7 +144,7 @@ bool tftDispSPI::updateContent()
     int updateEndRow = (mUpdateEndY + textHeight - 1) / textHeight;
     for (int i=updateStartRow; i<updateEndRow; ++i) {
       mTmpSpr.pushImage(0, 0, VIEW_WIDTH, textHeight, mBgSprPtr+VIEW_WIDTH*i*textHeight);
-      blend4bppImageToBRG565(mTextSprPtr[i], mTmpSprPtr, VIEW_WIDTH, textHeight, TFT_EDISP_TRANSPARENT, default_4bit_palette);// mTextSpr[i].pushToSprite(&mTmpSpr, 0, 0, TFT_EDISP_TRANSPARENT);
+      blend4bppImageToBRG555(mTextSprPtr[i], mTmpSprPtr, VIEW_WIDTH, textHeight, TFT_EDISP_TRANSPARENT, default_4bit_palette);// mTextSpr[i].pushToSprite(&mTmpSpr, 0, 0, TFT_EDISP_TRANSPARENT);
       mTft.startWrite();
       mTft.pushImageDMA(0, i*textHeight, VIEW_WIDTH, textHeight, mTmpSprPtr);
       mTft.endWrite();
@@ -156,16 +156,17 @@ bool tftDispSPI::updateContent()
   return true;
 }
 
-void  tftDispSPI::blend4bppImageToBRG565(const uint16_t *src, uint16_t *dst, uint16_t width, uint16_t height, uint16_t transpColor, const uint16_t *palette)
+void  tftDispSPI::blend4bppImageToBRG555(const uint16_t *src, uint16_t *dst, uint16_t width, uint16_t height, uint16_t transpColor, const uint16_t *cmap)
 {
   const uint8_t *in = (const uint8_t*)src;
   int     nibble = 4;
   int pixels = width * height;
   for (int i=0; i<pixels; ++i) {
-    uint16_t  in_pixel = (*in >> nibble) & 0x0f;
-    if (in_pixel != transpColor) {
-      *dst = (palette[in_pixel] << 11) | ((palette[in_pixel] >> 5)&0x07e0) | ((palette[in_pixel] >> 6)&0x001f);
-      // *dst = palette[in_pixel];
+    uint16_t  index = (*in >> nibble) & 0x0f;
+    if (index != transpColor) {
+      uint16_t color = cmap[index];
+      *dst = ((color << 10)&0x7c00) | ((color >> 6)&0x03ff);
+      // *dst = color;
     }
     ++dst;
     nibble = (nibble + 4) & 4;
