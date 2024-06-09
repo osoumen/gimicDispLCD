@@ -293,8 +293,7 @@ void tftDispSPI::clear(void)
       mTextSpr[i].fillSprite(TFT_EDISP_TRANSPARENT);
     }
   }
-  mUpdateStartY = 0;
-  mUpdateEndY = VIEW_HEIGHT;
+  setUpdateArea(0, VIEW_HEIGHT);
 }
 
 void tftDispSPI::move(int r, int c)

@@ -9,7 +9,9 @@ uint8_t button_input=0;
 uint8_t button_ipol=0;
 volatile bool i2c_reading;
 uint8_t i2c_reading_address;
-unsigned long myTime;
+uint32_t updateTime;
+uint32_t keepAliveTime;
+bool  connected=false;
 
 tftDispSPI tft;
 EscSeqParser parser(&tft);
@@ -44,6 +46,15 @@ void setup() {
   Serial1.begin(115200);
 
   tft.init();
+
+  showStartupScreen();
+}
+
+void showStartupScreen() {
+  tft.init_disp();
+  tft.set_charsize(2);
+  tft.move(7, 6);
+  tft.puts_("G.I.M.I.C\x82\xAA\x90\xDA\x91\xB1\x82\xB3\x82\xEA\x82\xC4\x82\xA2\x82\xDC\x82\xB9\x82\xF1\x81\x42");
 }
 
 void loop() {
@@ -54,9 +65,19 @@ void loop() {
   //   parser.ParseByte(Serial.read());
   // }
 
-  if ((millis() - myTime) > 10) {
+  if ((millis() - updateTime) > 10) {
     if (tft.updateContent())
-      myTime = millis();
+      updateTime = millis();
+  }
+
+  if ((millis() - keepAliveTime) > 1000) {
+    if (connected) {
+      showStartupScreen();
+      connected = false;
+    }
+  }
+  else {
+    connected = true;
   }
 
   if (Serial1.overflow()) {
@@ -130,6 +151,7 @@ void req() {
     else {
       Wire1.write(0);
     }
+    keepAliveTime = millis();
   }
   else {
     Wire1.write(0);
