@@ -124,6 +124,7 @@ bool tftDispSPI::updateContent()
 {
 	if (mUpdateStartY < mUpdateEndY) {
     if (mTft.dmaBusy()) return false;
+    // ちらつきあり
 /*
 		mTft.startWrite();
     mTft.pushImageDMA(0, mUpdateStartY, VIEW_WIDTH, mUpdateEndY - mUpdateStartY, mBgSprPtr+VIEW_WIDTH*mUpdateStartY);
@@ -224,10 +225,11 @@ void tftDispSPI::puts_(const char* str, uint32_t max_len)
     if (lineText[0] != 0) {
       setUpdateArea(lineStartY, lineEndY);
     }
-    // テキストを描画
+    // テキストを1文字ずつ描画
     int drawPos = 0;
     while (lineText[drawPos] != 0) {
       if (mReading2ByteCode) {
+        // 2バイト文字はバッファリングして句点コードの並びに変換する
         m2ByteGlyph |= lineText[drawPos];
         mReading2ByteCode = false;
         int glyph = sjisToLiner(m2ByteGlyph);
@@ -246,14 +248,15 @@ void tftDispSPI::puts_(const char* str, uint32_t max_len)
       }
       ++drawPos;
     }
-    // 下線を描画
+    // 下線が設定されていれば描画する
     if (mFontStyle & STYLE_UNDERLINED) {
       mTextSpr[mTextPosY].drawFastHLine(lineStartPosX * textWidth, textHeight-1, (mTextPosX - lineStartPosX) * textWidth, foreColor);
     }
     else if (fontHeight == 11) {
+      // 中フォントのサイズは11pxなので12段目を背景色で描画する
       mTextSpr[mTextPosY].drawFastHLine(lineStartPosX * textWidth, textHeight-1, (mTextPosX - lineStartPosX) * textWidth, backColor);
     }
-    // 改行コードの処理
+    // 改行コードがあれば次の行に進む処理
     startCol += lineLen;
     while (str[startCol] == '\r' || str[startCol] == '\n') {
       if (str[startCol] == '\r') {
