@@ -241,7 +241,12 @@ void tftDispSPI::puts_(const char* str, uint32_t max_len)
           mReading2ByteCode = true;
         }
         else {
-          mTextSpr[mTextPosY].drawXBitmap(mTextPosX*textWidth,0,mAsciiGlyphData+mAsciiGlyphBytes*lineText[drawPos],textWidth,fontHeight,foreColor,backColor);
+          if (lineText[drawPos] == ' ') {
+            mTextSpr[mTextPosY].fillRect(mTextPosX*textWidth,0, textWidth,fontHeight, backColor);
+          }
+          else {
+            mTextSpr[mTextPosY].drawXBitmap(mTextPosX*textWidth,0,mAsciiGlyphData+mAsciiGlyphBytes*lineText[drawPos],textWidth,fontHeight,foreColor,backColor);
+          }
           mTextPosX += 1;
         }
       }
