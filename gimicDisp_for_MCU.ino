@@ -60,6 +60,7 @@ void showStartupScreen() {
 void loop() {
   while (Serial1.available() > 0) {
     parser.ParseByte(Serial1.read());
+    connected = true;
   }
   // while (Serial.available() > 0) {
   //   parser.ParseByte(Serial.read());
@@ -70,7 +71,7 @@ void loop() {
       updateTime = millis();
   }
 
-  if ((millis() - keepAliveTime) > 1000) {
+  if ((millis() - keepAliveTime) > 3500) {
     if (connected) {
       showStartupScreen();
       connected = false;
@@ -147,11 +148,11 @@ void req() {
     i2c_reading = false;
     if (i2c_reading_address == 0x09) {
       Wire1.write(button_input);
+      keepAliveTime = millis();
     }
     else {
       Wire1.write(0);
     }
-    keepAliveTime = millis();
   }
   else {
     Wire1.write(0);
