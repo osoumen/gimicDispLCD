@@ -32,11 +32,11 @@ void setup() {
   gpio_set_input_hysteresis_enabled (14, true);
   pinMode(26, INPUT_PULLUP);
   gpio_set_input_hysteresis_enabled (26, true);
-  attachInterrupt(digitalPinToInterrupt(4), buttonChange, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(6), buttonChange, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(7), buttonChange, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(14), buttonChange, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(26), buttonChange, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(4), buttonChange1, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(6), buttonChange2, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(7), buttonChange3, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(14), buttonChange4, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(26), buttonChange5, CHANGE);
 
   //Serial.begin(115200);
   Serial1.setPinout(0, 1);
@@ -67,20 +67,40 @@ void loop() {
   }
 }
 
-void buttonChange() {
-  int pinInput = 0;
+void buttonChange1() {
+  int pinInput = button_input & ~(1 << 3);
   if (digitalRead(4) == LOW) {
     pinInput |= 1 << 3;
   }
+  button_input = pinInput;
+}
+
+void buttonChange2() {
+  int pinInput = button_input & ~(1 << 4);
   if (digitalRead(6) == LOW) {
     pinInput |= 1 << 4;
   }
+  button_input = pinInput;
+}
+
+void buttonChange3() {
+  int pinInput = button_input & ~(1 << 5);
   if (digitalRead(7) == LOW) {
     pinInput |= 1 << 5;
   }
+  button_input = pinInput;
+}
+
+void buttonChange4() {
+  int pinInput = button_input & ~(1 << 6);
   if (digitalRead(14) == LOW) {
     pinInput |= 1 << 6;
   }
+  button_input = pinInput;
+}
+
+void buttonChange5() {
+  int pinInput = button_input & ~(1 << 7);
   if (digitalRead(26) == LOW) {
     pinInput |= 1 << 7;
   }
