@@ -38,6 +38,7 @@ tftDispSPI::tftDispSPI()
 , TFT_eSprite(&mTft)
 , TFT_eSprite(&mTft)
 , TFT_eSprite(&mTft)}
+, mTmpSpr(&mTft)
 , mTextSprPtr{nullptr
 , nullptr
 , nullptr
@@ -62,6 +63,7 @@ tftDispSPI::tftDispSPI()
 , nullptr
 , nullptr
 , nullptr}
+, mTmpSprPtr(nullptr)
 , mUpdateStartY(VIEW_HEIGHT)
 , mUpdateEndY(0)
 , mTextPosX(0)
@@ -138,19 +140,15 @@ bool tftDispSPI::updateContent()
     */
     
     int textHeight = sTextHeight[mFontType];
-    TFT_eSprite tmpSpr(&mTft);
-    tmpSpr.setColorDepth(16);
-    uint16_t* tmpSprPtr = (uint16_t*)tmpSpr.createSprite(VIEW_WIDTH, textHeight);
     int updateStartRow = mUpdateStartY / textHeight;
     int updateEndRow = (mUpdateEndY + textHeight - 1) / textHeight;
     for (int i=updateStartRow; i<updateEndRow; ++i) {
-      tmpSpr.pushImage(0, 0, VIEW_WIDTH, textHeight, mBgSprPtr+VIEW_WIDTH*i*textHeight);
-      blend4bppImageToRGB565(mTextSprPtr[i], tmpSprPtr, VIEW_WIDTH, textHeight, TFT_EDISP_TRANSPARENT, default_4bit_palette);// mTextSpr[i].pushToSprite(&tmpSpr, 0, 0, TFT_EDISP_TRANSPARENT);
+      mTmpSpr.pushImage(0, 0, VIEW_WIDTH, textHeight, mBgSprPtr+VIEW_WIDTH*i*textHeight);
+      blend4bppImageToBRG565(mTextSprPtr[i], mTmpSprPtr, VIEW_WIDTH, textHeight, TFT_EDISP_TRANSPARENT, default_4bit_palette);// mTextSpr[i].pushToSprite(&mTmpSpr, 0, 0, TFT_EDISP_TRANSPARENT);
       mTft.startWrite();
-      mTft.pushImageDMA(0, i*textHeight, VIEW_WIDTH, textHeight, tmpSprPtr);
+      mTft.pushImageDMA(0, i*textHeight, VIEW_WIDTH, textHeight, mTmpSprPtr);
       mTft.endWrite();
     }
-    tmpSpr.deleteSprite();
 
     mUpdateStartY = VIEW_HEIGHT;
     mUpdateEndY = 0;
@@ -158,7 +156,7 @@ bool tftDispSPI::updateContent()
   return true;
 }
 
-void  tftDispSPI::blend4bppImageToRGB565(const uint16_t *src, uint16_t *dst, uint16_t width, uint16_t height, uint16_t transpColor, const uint16_t *palette)
+void  tftDispSPI::blend4bppImageToBRG565(const uint16_t *src, uint16_t *dst, uint16_t width, uint16_t height, uint16_t transpColor, const uint16_t *palette)
 {
   const uint8_t *in = (const uint8_t*)src;
   int     nibble = 4;
@@ -470,22 +468,22 @@ void tftDispSPI::del(int n)
 
 void tftDispSPI::save_attribute(int n)
 {
-	
+	// 非対応
 }
 
 void tftDispSPI::load_attribute(int n)
 {
-	
+	// 非対応
 }
 
 void tftDispSPI::curon(void)
 {
-	
+	// 非対応
 }
 
 void tftDispSPI::curoff(void)
 {
-	
+	// 非対応
 }
 
 void tftDispSPI::init_disp(void)
@@ -497,6 +495,7 @@ void tftDispSPI::init_disp(void)
 
 void tftDispSPI::set_charsize(int x)
 {
+  // 8pxフォントは未使用なので無効化
   // TODO: 動かない原因を調査
   if (x==0) return;
 
@@ -506,6 +505,10 @@ void tftDispSPI::set_charsize(int x)
       mTextSprPtr[i] = nullptr;
     }
   }
+  if (mTmpSprPtr != nullptr) {
+    mTmpSpr.deleteSprite();
+    mTmpSprPtr = nullptr;
+  }
   int textHeight = sTextHeight[x];
   int textLines = VIEW_HEIGHT / textHeight;
   for (int i=0; i<textLines; ++i) {
@@ -513,6 +516,9 @@ void tftDispSPI::set_charsize(int x)
     mTextSprPtr[i] = (uint16_t*)mTextSpr[i].createSprite(VIEW_WIDTH, textHeight);
     mTextSpr[i].fillSprite(TFT_EDISP_TRANSPARENT);
   }
+  mTmpSpr.setColorDepth(16);
+  mTmpSprPtr = (uint16_t*)mTmpSpr.createSprite(VIEW_WIDTH, textHeight);
+
   mFontType = x;
   switch(x) {
     case kTinyFont:
