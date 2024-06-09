@@ -123,7 +123,7 @@ bool tftDispSPI::updateContent()
 {
 	if (mUpdateStartY < mUpdateEndY) {
     if (mTft.dmaBusy()) return false;
-
+/*
 		mTft.startWrite();
     mTft.pushImageDMA(0, mUpdateStartY, VIEW_WIDTH, mUpdateEndY - mUpdateStartY, mBgSprPtr+VIEW_WIDTH*mUpdateStartY);
     int textHeight = sTextHeight[mFontType];
@@ -133,7 +133,8 @@ bool tftDispSPI::updateContent()
       mTextSpr[i].pushSprite(0, textHeight * i, TFT_EDISP_TRANSPARENT);
     }
     mTft.endWrite();
-/*
+    */
+    
     int textHeight = sTextHeight[mFontType];
     TFT_eSprite tmpSpr(&mTft);
     tmpSpr.setColorDepth(16);
@@ -142,17 +143,36 @@ bool tftDispSPI::updateContent()
     int updateEndRow = (mUpdateEndY + textHeight - 1) / textHeight;
     for (int i=updateStartRow; i<updateEndRow; ++i) {
       tmpSpr.pushImage(0, 0, VIEW_WIDTH, textHeight, mBgSprPtr+VIEW_WIDTH*i*textHeight);
-      mTextSpr[i].pushToSprite(&tmpSpr, 0, 0, TFT_EDISP_TRANSPARENT);
+      blend4bppImageToRGB565(mTextSprPtr[i], tmpSprPtr, VIEW_WIDTH, textHeight, TFT_EDISP_TRANSPARENT, default_4bit_palette);// mTextSpr[i].pushToSprite(&tmpSpr, 0, 0, TFT_EDISP_TRANSPARENT);
       mTft.startWrite();
       mTft.pushImageDMA(0, i*textHeight, VIEW_WIDTH, textHeight, tmpSprPtr);
       mTft.endWrite();
     }
     tmpSpr.deleteSprite();
-*/
+
     mUpdateStartY = VIEW_HEIGHT;
     mUpdateEndY = 0;
 	}
   return true;
+}
+
+void  tftDispSPI::blend4bppImageToRGB565(const uint16_t *src, uint16_t *dst, uint16_t width, uint16_t height, uint16_t transpColor, const uint16_t *palette)
+{
+  const uint8_t *in = (const uint8_t*)src;
+  int     nibble = 4;
+  int pixels = width * height;
+  for (int i=0; i<pixels; ++i) {
+    uint16_t  in_pixel = (*in >> nibble) & 0x0f;
+    if (in_pixel != transpColor) {
+      *dst = (palette[in_pixel] << 11) | ((palette[in_pixel] >> 5)&0x07e0) | ((palette[in_pixel] >> 6)&0x001f);
+      // *dst = palette[in_pixel];
+    }
+    ++dst;
+    nibble = (nibble + 4) & 4;
+    if (nibble == 4) {
+      ++in;
+    }
+  }
 }
 
 void	tftDispSPI::setUpdateArea(int startY, int endY)

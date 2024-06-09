@@ -282,6 +282,7 @@ private:
 	static int	getLineLength(const char *str);
 	void			  setUpdateArea(int startY, int endY);
   uint16_t    conv555To565(int col) { return ((col << 1) & 0xffc0) | (col & 0x1f); }
+  void        blend4bppImageToRGB565(const uint16_t *src, uint16_t *dst, uint16_t width, uint16_t height, uint16_t transpColor, const uint16_t *palette);
 };
 
 #endif // tftDispSPI_h
