@@ -23,6 +23,11 @@ void setup() {
   Wire1.begin(0x20);
   Wire1.onReceive(recv);
   Wire1.onRequest(req);
+  
+#ifdef LED_BUILTIN
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, LOW);
+#endif
 }
 
 void setup1() {
@@ -145,6 +150,11 @@ void recv(int len) {
     uint8_t data = Wire1.read();
     if (address == 0x01) {
       button_ipol = data; // 読み取るだけ
+    }
+    else if (address == 0x09) {
+#ifdef LED_BUILTIN
+      digitalWrite(LED_BUILTIN, (data & 0x02)?LOW:HIGH);  // led g
+#endif
     }
   }
 }
