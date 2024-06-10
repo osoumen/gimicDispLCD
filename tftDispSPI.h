@@ -3,6 +3,8 @@
 
 #include <TFT_eSPI.h>
 
+#define SINGLEBYTEGLYPH_TO_RAM 1
+
 class tftDispSPI {
 public:
 	tftDispSPI();
@@ -279,7 +281,10 @@ private:
   const uint8_t *m2ByteGlyphData;
   uint16_t      m2ByteGlyph;
   bool          mReading2ByteCode;
-	
+#ifdef SINGLEBYTEGLYPH_TO_RAM
+  static uint8_t mAsciiGlyphCatch[4096];
+#endif
+
   static uint16_t    sjisToLiner(uint16_t sjis);
 	static int	getLineLength(const char *str);
 	void			  setUpdateArea(int startY, int endY);

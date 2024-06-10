@@ -12,6 +12,10 @@ const int sFontHeight[3] PROGMEM = {8, 11, 16};
 const int sTextHeight[3] PROGMEM = {8, 12, 16};
 const int sTextWidth[3] PROGMEM = {4, 5, 8};
 
+#ifdef SINGLEBYTEGLYPH_TO_RAM
+uint8_t tftDispSPI::mAsciiGlyphCatch[4096];
+#endif
+
 tftDispSPI::tftDispSPI()
 : mBgSpr(&mTft)
 , mTextSpr{TFT_eSprite(&mTft)
@@ -505,46 +509,63 @@ void tftDispSPI::set_charsize(int x)
   // TODO: 動かない原因を調査
   if (x==0) return;
 
-  for (int i=0; i<24; ++i) {
-    if (mTextSprPtr[i] != nullptr) {
-      mTextSpr[i].deleteSprite();
-      mTextSprPtr[i] = nullptr;
+  if (mFontType != x) {
+    mFontType = x;
+    for (int i=0; i<24; ++i) {
+      if (mTextSprPtr[i] != nullptr) {
+        mTextSpr[i].deleteSprite();
+        mTextSprPtr[i] = nullptr;
+      }
     }
-  }
-  if (mTmpSprPtr != nullptr) {
-    mTmpSpr.deleteSprite();
-    mTmpSprPtr = nullptr;
-  }
-  int textHeight = sTextHeight[x];
-  int textLines = VIEW_HEIGHT / textHeight;
-  for (int i=0; i<textLines; ++i) {
-    mTextSpr[i].setColorDepth(4);
-    mTextSprPtr[i] = (uint16_t*)mTextSpr[i].createSprite(VIEW_WIDTH, textHeight);
-    mTextSpr[i].fillSprite(TFT_EDISP_TRANSPARENT);
-  }
-  mTmpSpr.setColorDepth(16);
-  mTmpSprPtr = (uint16_t*)mTmpSpr.createSprite(VIEW_WIDTH, textHeight);
+    if (mTmpSprPtr != nullptr) {
+      mTmpSpr.deleteSprite();
+      mTmpSprPtr = nullptr;
+    }
+    int textHeight = sTextHeight[x];
+    int textLines = VIEW_HEIGHT / textHeight;
+    for (int i=0; i<textLines; ++i) {
+      mTextSpr[i].setColorDepth(4);
+      mTextSprPtr[i] = (uint16_t*)mTextSpr[i].createSprite(VIEW_WIDTH, textHeight);
+      mTextSpr[i].fillSprite(TFT_EDISP_TRANSPARENT);
+    }
+    mTmpSpr.setColorDepth(16);
+    mTmpSprPtr = (uint16_t*)mTmpSpr.createSprite(VIEW_WIDTH, textHeight);
 
-  mFontType = x;
-  switch(x) {
-    case kTinyFont:
-      mAsciiGlyphBytes = 8;
-      m2ByteGlyphBytes = 8;
-      mAsciiGlyphData = misaki_4x8_jisx0201;
-      m2ByteGlyphData = misaki_gothic;
-      break;
-    case kSmallFont:
-      mAsciiGlyphBytes = 11;
-      m2ByteGlyphBytes = 22;
-      mAsciiGlyphData = mplus_j10r_jisx0201;
-      m2ByteGlyphData = mplus_j10r;
-      break;
-    case kNormalFont:
-      mAsciiGlyphBytes = 16;
-      m2ByteGlyphBytes = 32;
-      mAsciiGlyphData = shnm8x16r;
-      m2ByteGlyphData = shnmk16;
-      break;
+    switch(x) {
+      case kTinyFont:
+        mAsciiGlyphBytes = 8;
+        m2ByteGlyphBytes = 8;
+#ifdef SINGLEBYTEGLYPH_TO_RAM
+        memcpy(mAsciiGlyphCatch, misaki_4x8_jisx0201, sizeof(misaki_4x8_jisx0201));
+        mAsciiGlyphData = mAsciiGlyphCatch;
+#else
+        mAsciiGlyphData = misaki_4x8_jisx0201;
+#endif
+        m2ByteGlyphData = misaki_gothic;
+        break;
+      case kSmallFont:
+        mAsciiGlyphBytes = 11;
+        m2ByteGlyphBytes = 22;
+#ifdef SINGLEBYTEGLYPH_TO_RAM
+        memcpy(mAsciiGlyphCatch, mplus_j10r_jisx0201, sizeof(mplus_j10r_jisx0201));
+        mAsciiGlyphData = mAsciiGlyphCatch;
+#else
+        mAsciiGlyphData = mplus_j10r_jisx0201;
+#endif
+        m2ByteGlyphData = mplus_j10r;
+        break;
+      case kNormalFont:
+        mAsciiGlyphBytes = 16;
+        m2ByteGlyphBytes = 32;
+#ifdef SINGLEBYTEGLYPH_TO_RAM
+        memcpy(mAsciiGlyphCatch, shnm8x16r, sizeof(shnm8x16r));
+        mAsciiGlyphData = mAsciiGlyphCatch;
+#else
+        mAsciiGlyphData = shnm8x16r;
+#endif
+        m2ByteGlyphData = shnmk16;
+        break;
+    }
   }
 }
 
