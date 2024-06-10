@@ -281,6 +281,7 @@ private:
   const uint8_t *m2ByteGlyphData;
   uint16_t      m2ByteGlyph;
   bool          mReading2ByteCode;
+  static char   mScreenChars[2400*2];
 #ifdef SINGLEBYTEGLYPH_TO_RAM
   static uint8_t mAsciiGlyphCatch[4096];
 #endif
