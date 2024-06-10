@@ -96,6 +96,7 @@ void tftDispSPI::init()
   mBgSpr.fillSprite(TFT_BLACK);
   mBgSprPtr = (uint16_t*)mBgSpr.createSprite(VIEW_WIDTH, VIEW_HEIGHT);
   set_charsize(kNormalFont);
+  memset(mScreenChars, 0, 2 * (VIEW_WIDTH * VIEW_HEIGHT) / (sTextHeight[kNormalFont] * sTextWidth[kNormalFont]));
   mTft.initDMA();
 }
 
@@ -326,7 +327,7 @@ void tftDispSPI::clear(void)
       mTextSpr[i].fillSprite(TFT_EDISP_TRANSPARENT);
     }
   }
-  memset(mScreenChars, 0, 2 * 2400 / (sTextHeight[mFontType] * sTextWidth[mFontType]));
+  memset(mScreenChars, 0, 2 * (VIEW_WIDTH * VIEW_HEIGHT) / (sTextHeight[mFontType] * sTextWidth[mFontType]));
   setUpdateArea(0, VIEW_HEIGHT);
 }
 
