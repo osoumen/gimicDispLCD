@@ -23,7 +23,9 @@ void setup() {
   Wire1.begin(0x20);
   Wire1.onReceive(recv);
   Wire1.onRequest(req);
+}
 
+void setup1() {
   pinMode(4, INPUT_PULLUP);
   gpio_set_input_hysteresis_enabled (4, true);
   pinMode(6, INPUT_PULLUP);
@@ -58,6 +60,10 @@ void showStartupScreen() {
 }
 
 void loop() {
+}
+
+void loop1() {
+  uint32_t updateStartTime = millis();
   while (Serial1.available() > 0) {
     parser.ParseByte(Serial1.read());
     connected = true;
