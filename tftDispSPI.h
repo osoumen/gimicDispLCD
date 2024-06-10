@@ -3,7 +3,7 @@
 
 #include <TFT_eSPI.h>
 
-#define SINGLEBYTEGLYPH_TO_RAM 1
+//#define SINGLEBYTEGLYPH_TO_RAM 1
 
 class tftDispSPI {
 public:
@@ -290,6 +290,7 @@ private:
 	static int	getLineLength(const char *str);
 	void			  setUpdateArea(int startY, int endY);
   uint16_t    conv555To565(int col) { return ((col << 1) & 0xffc0) | (col & 0x1f); }
+  void        drawGlyphTo4bppBuffer(const uint8_t *glyphSt, uint8_t *dst, uint16_t xpos, uint16_t fontWidth, uint16_t fontHeight, uint8_t foreColor, uint8_t backColor);
   void        blend4bppImageToBRG555(const uint16_t *src, uint16_t *dst, uint16_t width, uint16_t height, uint16_t transpColor, const uint16_t *cmap);
 };
 

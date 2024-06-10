@@ -245,7 +245,8 @@ void tftDispSPI::puts_(const char* str, uint32_t max_len)
           mScreenChars[screenCharInd+3] = lineText[drawPos];
           m2ByteGlyph |= lineText[drawPos];
           int glyph = sjisToLiner(m2ByteGlyph);
-          mTextSpr[mTextPosY].drawXBitmap(mTextPosX*textWidth,0,m2ByteGlyphData+m2ByteGlyphBytes*glyph,textWidth*2,fontHeight,foreColor,backColor);
+          // mTextSpr[mTextPosY].drawXBitmap(mTextPosX*textWidth,0,m2ByteGlyphData+m2ByteGlyphBytes*glyph,textWidth*2,fontHeight,foreColor,backColor);
+          drawGlyphTo4bppBuffer(m2ByteGlyphData+m2ByteGlyphBytes*glyph, (uint8_t *)mTextSprPtr[mTextPosY], mTextPosX*textWidth, textWidth*2,fontHeight,foreColor,backColor);
           ++numUpdatesPerLine;
         }
         mReading2ByteCode = false;
@@ -265,7 +266,8 @@ void tftDispSPI::puts_(const char* str, uint32_t max_len)
               mTextSpr[mTextPosY].fillRect(mTextPosX*textWidth,0, textWidth,fontHeight, backColor);
             }
             else {
-              mTextSpr[mTextPosY].drawXBitmap(mTextPosX*textWidth,0,mAsciiGlyphData+mAsciiGlyphBytes*lineText[drawPos],textWidth,fontHeight,foreColor,backColor);
+              // mTextSpr[mTextPosY].drawXBitmap(mTextPosX*textWidth,0,mAsciiGlyphData+mAsciiGlyphBytes*lineText[drawPos],textWidth,fontHeight,foreColor,backColor);
+              drawGlyphTo4bppBuffer(mAsciiGlyphData+mAsciiGlyphBytes*lineText[drawPos], (uint8_t *)mTextSprPtr[mTextPosY], mTextPosX*textWidth, textWidth,fontHeight,foreColor,backColor);
             }
             ++numUpdatesPerLine;
           }
@@ -277,6 +279,7 @@ void tftDispSPI::puts_(const char* str, uint32_t max_len)
     }
     if (numUpdatesPerLine > 0) {
       // 下線が設定されていれば描画する
+      // TODO: スタイルのみの変化で描画されない
       if (mFontStyle & STYLE_UNDERLINED) {
         mTextSpr[mTextPosY].drawFastHLine(lineStartPosX * textWidth, textHeight-1, (mTextPosX - lineStartPosX) * textWidth, foreColor);
       }
@@ -299,6 +302,35 @@ void tftDispSPI::puts_(const char* str, uint32_t max_len)
       ++startCol;
     }
   } while (str[startCol] != 0);
+}
+
+void  tftDispSPI::drawGlyphTo4bppBuffer(const uint8_t *glyphSt, uint8_t *dst, uint16_t xpos, uint16_t fontWidth, uint16_t fontHeight, uint8_t foreColor, uint8_t backColor)
+{
+  uint8_t buf[32];
+  memcpy(buf, glyphSt, ((fontWidth + 7)>>3) * fontHeight);
+  const uint8_t *readPtr = buf;
+  for (int row=0; row<fontHeight; ++row) {
+    uint8_t *out = dst + ((xpos + VIEW_WIDTH * row) >> 1);
+    int nibble = (xpos & 1) << 2;
+    int x=0;
+    int shift=0;
+    uint8_t inByte;
+    while (x<fontWidth) {
+      if (shift == 0) {
+        inByte = *(readPtr++);
+      }
+      uint8_t color = (inByte & 1) ? foreColor : backColor;
+      *out &= 0x0f << nibble;
+      *out |= color << (4 - nibble);
+      nibble = (nibble + 4) & 4;
+      if (nibble == 0) {
+        ++out;
+      }
+      inByte >>= 1;
+      shift = (shift + 1) & 0x07;
+      ++x;
+    }
+  }
 }
 
 void tftDispSPI::printw(const char* fmt, ...)
