@@ -1,3 +1,9 @@
+#define BUTTON1_PIN_NO  4
+#define BUTTON2_PIN_NO  6
+#define BUTTON3_PIN_NO  7
+#define BUTTON4_PIN_NO  14
+#define BUTTON5_PIN_NO  26
+
 #define ENABLE_MULTI_CORE 1
 
 #include "tftDispSPI.h"
@@ -35,23 +41,23 @@ void setup() {
 
 void setup1() {
 #endif
-  pinMode(4, INPUT_PULLUP);
-  gpio_set_input_hysteresis_enabled (4, true);
-  pinMode(6, INPUT_PULLUP);
-  gpio_set_input_hysteresis_enabled (6, true);
-  pinMode(7, INPUT_PULLUP);
-  gpio_set_input_hysteresis_enabled (7, true);
-  pinMode(14, INPUT_PULLUP);
-  gpio_set_input_hysteresis_enabled (14, true);
-  pinMode(26, INPUT_PULLUP);
-  gpio_set_input_hysteresis_enabled (26, true);
-  attachInterrupt(digitalPinToInterrupt(4), buttonChange1, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(6), buttonChange2, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(7), buttonChange3, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(14), buttonChange4, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(26), buttonChange5, CHANGE);
 
   //Serial.begin(115200);
+  pinMode(BUTTON1_PIN_NO, INPUT_PULLUP);
+  gpio_set_input_hysteresis_enabled (BUTTON1_PIN_NO, true);
+  pinMode(BUTTON2_PIN_NO, INPUT_PULLUP);
+  gpio_set_input_hysteresis_enabled (BUTTON2_PIN_NO, true);
+  pinMode(BUTTON3_PIN_NO, INPUT_PULLUP);
+  gpio_set_input_hysteresis_enabled (BUTTON3_PIN_NO, true);
+  pinMode(BUTTON4_PIN_NO, INPUT_PULLUP);
+  gpio_set_input_hysteresis_enabled (BUTTON4_PIN_NO, true);
+  pinMode(BUTTON5_PIN_NO, INPUT_PULLUP);
+  gpio_set_input_hysteresis_enabled (BUTTON5_PIN_NO, true);
+  attachInterrupt(digitalPinToInterrupt(BUTTON1_PIN_NO), buttonChange1, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(BUTTON2_PIN_NO), buttonChange2, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(BUTTON3_PIN_NO), buttonChange3, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(BUTTON4_PIN_NO), buttonChange4, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(BUTTON5_PIN_NO), buttonChange5, CHANGE);
   Serial1.setPinout(0, 1);
   Serial1.setFIFOSize(4096);
   Serial1.begin(115200);
@@ -108,7 +114,7 @@ void loop1() {
 
 void buttonChange1() {
   int pinInput = button_input & ~(1 << 3);
-  if (digitalRead(4) == LOW) {
+  if (digitalRead(BUTTON1_PIN_NO) == LOW) {
     pinInput |= 1 << 3;
   }
   button_input = pinInput;
@@ -116,7 +122,7 @@ void buttonChange1() {
 
 void buttonChange2() {
   int pinInput = button_input & ~(1 << 4);
-  if (digitalRead(6) == LOW) {
+  if (digitalRead(BUTTON2_PIN_NO) == LOW) {
     pinInput |= 1 << 4;
   }
   button_input = pinInput;
@@ -124,7 +130,7 @@ void buttonChange2() {
 
 void buttonChange3() {
   int pinInput = button_input & ~(1 << 5);
-  if (digitalRead(7) == LOW) {
+  if (digitalRead(BUTTON3_PIN_NO) == LOW) {
     pinInput |= 1 << 5;
   }
   button_input = pinInput;
@@ -132,7 +138,7 @@ void buttonChange3() {
 
 void buttonChange4() {
   int pinInput = button_input & ~(1 << 6);
-  if (digitalRead(14) == LOW) {
+  if (digitalRead(BUTTON4_PIN_NO) == LOW) {
     pinInput |= 1 << 6;
   }
   button_input = pinInput;
@@ -140,7 +146,7 @@ void buttonChange4() {
 
 void buttonChange5() {
   int pinInput = button_input & ~(1 << 7);
-  if (digitalRead(26) == LOW) {
+  if (digitalRead(BUTTON5_PIN_NO) == LOW) {
     pinInput |= 1 << 7;
   }
   button_input = pinInput;
