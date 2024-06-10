@@ -1,3 +1,5 @@
+#define ENABLE_MULTI_CORE 1
+
 #include "tftDispSPI.h"
 #include "EscSeqParser.h"
 #include <Wire.h>
@@ -28,9 +30,11 @@ void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, LOW);
 #endif
+#ifdef ENABLE_MULTI_CORE
 }
 
 void setup1() {
+#endif
   pinMode(4, INPUT_PULLUP);
   gpio_set_input_hysteresis_enabled (4, true);
   pinMode(6, INPUT_PULLUP);
@@ -65,9 +69,11 @@ void showStartupScreen() {
 }
 
 void loop() {
+#ifdef ENABLE_MULTI_CORE
 }
 
 void loop1() {
+#endif
   uint32_t updateStartTime = millis();
   while (Serial1.available() > 0) {
     parser.ParseByte(Serial1.read());
