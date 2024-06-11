@@ -72,6 +72,7 @@ void showStartupScreen() {
   tft.set_charsize(2);
   tft.move(7, 6);
   tft.puts_("G.I.M.I.C\x82\xAA\x90\xDA\x91\xB1\x82\xB3\x82\xEA\x82\xC4\x82\xA2\x82\xDC\x82\xB9\x82\xF1\x81\x42");
+  tft.move(0, 0);
 }
 
 void loop() {
