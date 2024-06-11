@@ -262,10 +262,10 @@ private:
 
   TFT_eSPI      mTft;
   TFT_eSprite   mBgSpr;
-  TFT_eSprite   mTextSpr[24];
+  TFT_eSprite   mTextSpr[30];
   TFT_eSprite   mTmpSpr;
   uint16_t*     mBgSprPtr;
-  uint16_t*     mTextSprPtr[24];
+  uint16_t*     mTextSprPtr[30];
   uint16_t*     mTmpSprPtr;
   int           mFontType;
   int           mUpdateStartY;

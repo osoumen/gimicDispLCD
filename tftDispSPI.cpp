@@ -43,9 +43,21 @@ tftDispSPI::tftDispSPI()
 , TFT_eSprite(&mTft)
 , TFT_eSprite(&mTft)
 , TFT_eSprite(&mTft)
+, TFT_eSprite(&mTft)
+, TFT_eSprite(&mTft)
+, TFT_eSprite(&mTft)
+, TFT_eSprite(&mTft)
+, TFT_eSprite(&mTft)
+, TFT_eSprite(&mTft)
 , TFT_eSprite(&mTft)}
 , mTmpSpr(&mTft)
 , mTextSprPtr{nullptr
+, nullptr
+, nullptr
+, nullptr
+, nullptr
+, nullptr
+, nullptr
 , nullptr
 , nullptr
 , nullptr
@@ -358,7 +370,7 @@ void tftDispSPI::clear(void)
 {
 	mTextPosX = mTextPosY = 0;
   mBgSpr.fillSprite(TFT_BLACK);
-  for (int i=0; i<24; ++i) {
+  for (int i=0; i<30; ++i) {
     if (mTextSprPtr[i] != nullptr) {
       mTextSpr[i].fillSprite(TFT_EDISP_TRANSPARENT);
     }
@@ -584,13 +596,9 @@ void tftDispSPI::init_disp(void)
 
 void tftDispSPI::set_charsize(int x)
 {
-  // 8pxフォントは未使用なので無効化
-  // TODO: 動かない原因を調査
-  if (x==0) return;
-
   if (mFontType != x) {
     mFontType = x;
-    for (int i=0; i<24; ++i) {
+    for (int i=0; i<30; ++i) {
       if (mTextSprPtr[i] != nullptr) {
         mTextSpr[i].deleteSprite();
         mTextSprPtr[i] = nullptr;
