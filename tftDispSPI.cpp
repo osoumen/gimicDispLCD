@@ -110,6 +110,15 @@ void tftDispSPI::init()
   set_charsize(kNormalFont);
   memset(mScreenChars, 0, (3 * VIEW_WIDTH * VIEW_HEIGHT) / (sTextHeight[kNormalFont] * sTextWidth[kNormalFont]));
   mTft.initDMA();
+
+  // TODO: キャリブレーション処理で得た値を使用する
+  uint16_t calData[5] = { 420, 3487, 287, 3524, 3 };
+  mTft.setTouch(calData);
+}
+
+bool  tftDispSPI::getTouch(uint16_t *x, uint16_t *y)
+{
+  return mTft.getTouch(x, y);
 }
 
 uint16_t tftDispSPI::sjisToLiner(uint16_t sjis)

@@ -240,6 +240,8 @@ public:
 	
   bool  updateContent();
 
+  bool  getTouch(uint16_t *x, uint16_t *y);
+
 // protected:
 	void puts_(const char* str, uint32_t max_len=0);
 	

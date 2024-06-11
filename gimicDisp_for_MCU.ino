@@ -19,10 +19,22 @@ volatile bool i2c_reading;
 uint8_t i2c_reading_address;
 uint32_t updateTime;
 uint32_t keepAliveTime;
+uint32_t tpUpdateTime;
+uint32_t lastTpDownTime;
 bool  connected=false;
+uint16_t tp_X, tp_Y, tp_On=0;
 
 tftDispSPI tft;
 EscSeqParser parser(&tft);
+
+enum MouseButtons {
+	MOUSE_BTN1			= (1 << 0),
+	MOUSE_BTN2			= (1 << 1),
+	MOUSE_BTN3			= (1 << 2),
+	MOUSE_BTN_RELEASE	= (1 << 3),
+	MOUSE_BTN1_REL		= (MOUSE_BTN1 | MOUSE_BTN_RELEASE),
+	MOUSE_BTN_DBL_CLK	= (1 << 4),
+};
 
 void setup() {
   Wire1.setSDA(2);
@@ -103,6 +115,40 @@ void loop1() {
   }
   else {
     connected = true;
+  }
+
+  if ((millis() - tpUpdateTime) > 10) {
+    tpUpdateTime = millis();
+    uint16_t x,y;
+    bool isOn = tft.getTouch(&x, &y);
+    if (isOn == false && tp_On == true) {
+      Serial1.printf("\x1b[<%d;%d;%dM", MOUSE_BTN1_REL, x, y);
+      Serial.printf("\x1b[<%d;%d;%dM\n", MOUSE_BTN1_REL, x, y);
+      tp_X = x;
+      tp_Y = y;
+      tp_On = false;
+    }
+    else if (isOn) {
+      int btnState = MOUSE_BTN1;
+      if (tp_On == false) {
+        if ((millis() - lastTpDownTime) < 500) {   // TODO: ダブルタップ時間を調整
+          int distance_x = (tp_X - x);
+          int distance_y = (tp_Y - y);
+          if ((distance_x * distance_x + distance_y * distance_y) < 20*20) {
+            btnState |= MOUSE_BTN_DBL_CLK;
+          }
+        }
+        tp_X = tp_Y = 9999;
+        tp_On = true;
+        lastTpDownTime = millis();
+      }
+      if ((x != tp_X) || (y != tp_Y)) {
+        Serial1.printf("\x1b[<%d;%d;%dM", MOUSE_BTN1, x, y);
+        Serial.printf("\x1b[<%d;%d;%dM\n", btnState, x, y);
+        tp_X = x;
+        tp_Y = y;
+      }
+    }
   }
 
   if (Serial1.overflow()) {
