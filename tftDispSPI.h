@@ -252,8 +252,8 @@ private:
   static const int	VIEW_WIDTH = 320;
   static const int	VIEW_HEIGHT = 240;
 	static const int	BG_BUFF_NUM = 4;
-//	static const int	MAX_LINES = 30;
-//	static const int	MAX_COLUMNS = 80;
+	static const int	MAX_LINES = 30;
+	static const int	MAX_COLUMNS = 80;
 	static const int	STYLE_BOLD = 0x01;
 	static const int	STYLE_UNDERLINED = 0x02;
 	static const int	STYLE_BLINKED = 0x04;
@@ -262,10 +262,10 @@ private:
 
   TFT_eSPI      mTft;
   TFT_eSprite   mBgSpr;
-  TFT_eSprite   mTextSpr[30];
+  TFT_eSprite   mTextSpr[MAX_LINES];
   TFT_eSprite   mTmpSpr;
   uint16_t*     mBgSprPtr;
-  uint16_t*     mTextSprPtr[30];
+  uint16_t*     mTextSprPtr[MAX_LINES];
   uint16_t*     mTmpSprPtr;
   int           mFontType;
   int           mUpdateStartY;
@@ -281,9 +281,9 @@ private:
   int           m2ByteGlyphBytes;
   const uint8_t *mAsciiGlyphData;
   const uint8_t *m2ByteGlyphData;
-  static char   mScreenChars[2400*3];
+  static char   mScreenChars[MAX_LINES*MAX_COLUMNS*3];
 #ifdef SINGLEBYTEGLYPH_TO_RAM
-  static uint8_t mAsciiGlyphCatch[4096];
+  static uint8_t mAsciiGlyphCatch[16*256];
 #endif
 
   static uint16_t    sjisToLiner(uint16_t sjis);
