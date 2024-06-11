@@ -279,7 +279,7 @@ private:
   int           m2ByteGlyphBytes;
   const uint8_t *mAsciiGlyphData;
   const uint8_t *m2ByteGlyphData;
-  uint16_t      m2ByteGlyph;
+  char          mGlyphFirstByte;
   bool          mReading2ByteCode;
   static char   mScreenChars[2400*2];
 #ifdef SINGLEBYTEGLYPH_TO_RAM
