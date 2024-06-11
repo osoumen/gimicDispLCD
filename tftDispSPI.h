@@ -274,14 +274,14 @@ private:
   int     		  mTextPosY;
 	uint16_t		  mTextColor;
 	uint16_t		  mTextBgColor;
-	uint32_t		  mFontStyle;
+	uint8_t 		  mFontStyle;
+  char          mGlyphFirstByte;
+  bool          mReading2ByteCode;
   int           mAsciiGlyphBytes;
   int           m2ByteGlyphBytes;
   const uint8_t *mAsciiGlyphData;
   const uint8_t *m2ByteGlyphData;
-  char          mGlyphFirstByte;
-  bool          mReading2ByteCode;
-  static char   mScreenChars[2400*2];
+  static char   mScreenChars[2400*3];
 #ifdef SINGLEBYTEGLYPH_TO_RAM
   static uint8_t mAsciiGlyphCatch[4096];
 #endif
