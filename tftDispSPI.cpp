@@ -372,17 +372,20 @@ void tftDispSPI::move(int r, int c)
 {
 	mTextPosY = r;
 	mTextPosX = c;
+  mReading2ByteCode = false;
 }
 
 void tftDispSPI::curmove(int r, int c)
 {
 	mTextPosY += r;
 	mTextPosX += c;
+  mReading2ByteCode = false;
 }
 
 void tftDispSPI::cur_rowtop(void)
 {
 	mTextPosX = 0;
+  mReading2ByteCode = false;
 }
 
 void tftDispSPI::set_attribute( int n )
@@ -524,6 +527,7 @@ void tftDispSPI::del_to_end()
   if ((delSt < 0) || (delEnd >= sizeof(mScreenChars)) || (mTextPosX >= sRowChars[mFontType])) return;
   memset(&mScreenChars[delSt], 0, (sRowChars[mFontType] - mTextPosX) * 3);
   setUpdateArea(textHeight * mTextPosY, textHeight * (mTextPosY + 1));
+  mReading2ByteCode = false;
 }
 
 void tftDispSPI::del_row()
@@ -535,6 +539,7 @@ void tftDispSPI::del_row()
   if ((delSt < 0) || (delEnd >= sizeof(mScreenChars))) return;
   memset(&mScreenChars[delSt], 0, sRowChars[mFontType] * 3);
   setUpdateArea(textHeight * mTextPosY, textHeight * (mTextPosY + 1));
+  mReading2ByteCode = false;
 }
 
 void tftDispSPI::del(int n)
@@ -547,6 +552,7 @@ void tftDispSPI::del(int n)
   if ((delSt < 0) || (delEnd >= sizeof(mScreenChars))) return;
   memset(&mScreenChars[delSt], 0, n * 3);
   setUpdateArea(textHeight * mTextPosY, textHeight * (mTextPosY + 1));
+  mReading2ByteCode = false;
 }
 
 void tftDispSPI::save_attribute(int n)
@@ -641,6 +647,7 @@ void tftDispSPI::set_charsize(int x)
         break;
     }
   }
+  mReading2ByteCode = false;
 }
 
 void tftDispSPI::set_bgbuff(int x)
