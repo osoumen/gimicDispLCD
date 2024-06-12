@@ -34,6 +34,7 @@ enum MouseButtons {
 	MOUSE_BTN_RELEASE	= (1 << 3),
 	MOUSE_BTN1_REL		= (MOUSE_BTN1 | MOUSE_BTN_RELEASE),
 	MOUSE_BTN_DBL_CLK	= (1 << 4),
+  IS_TP             = (1 << 5)
 };
 
 void setup() {
@@ -122,19 +123,20 @@ void loop1() {
     uint16_t x,y;
     bool isOn = tft.getTouch(&x, &y);
     if (isOn == false && tp_On == true) {
-      Serial1.printf("\x1b[<%d;%d;%dM", MOUSE_BTN1_REL, x, y);
-      Serial.printf("\x1b[<%d;%d;%dM\n", MOUSE_BTN1_REL, x, y);
+      Serial1.printf("\x1b[<%d;%d;%dM", MOUSE_BTN1_REL | IS_TP, x, y);
+      // Serial.printf("\x1b[<%d;%d;%dM\n", MOUSE_BTN1_REL | IS_TP, x, y);
       tp_X = x;
       tp_Y = y;
       tp_On = false;
     }
     else if (isOn) {
-      int btnState = MOUSE_BTN1;
+      int btnState = IS_TP;
       if (tp_On == false) {
+        btnState |= MOUSE_BTN1;
         if ((millis() - lastTpDownTime) < 500) {   // TODO: ダブルタップ時間を調整
           int distance_x = (tp_X - x);
           int distance_y = (tp_Y - y);
-          if ((distance_x * distance_x + distance_y * distance_y) < 20*20) {
+          if ((distance_x * distance_x + distance_y * distance_y) < 16*16) {
             btnState |= MOUSE_BTN_DBL_CLK;
           }
         }
@@ -143,8 +145,8 @@ void loop1() {
         lastTpDownTime = millis();
       }
       if ((x != tp_X) || (y != tp_Y)) {
-        Serial1.printf("\x1b[<%d;%d;%dM", MOUSE_BTN1, x, y);
-        Serial.printf("\x1b[<%d;%d;%dM\n", btnState, x, y);
+        Serial1.printf("\x1b[<%d;%d;%dM", btnState, x, y);
+        // Serial.printf("\x1b[<%d;%d;%dM\n", btnState, x, y);
         tp_X = x;
         tp_Y = y;
       }
