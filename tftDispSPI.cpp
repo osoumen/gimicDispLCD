@@ -13,9 +13,9 @@ const int sTextHeight[3] PROGMEM = {8, 12, 16};
 const int sTextWidth[3] PROGMEM = {4, 5, 8};
 const int sRowChars[3] PROGMEM = {80, 64, 40};
 
-char   tftDispSPI::mScreenChars[2400*3];
+char   tftDispSPI::mScreenChars[MAX_LINES*MAX_COLUMNS*3];
 #ifdef SINGLEBYTEGLYPH_TO_RAM
-uint8_t tftDispSPI::mAsciiGlyphCatch[4096];
+uint8_t tftDispSPI::mAsciiGlyphCatch[16*256];
 #endif
 
 tftDispSPI::tftDispSPI()
