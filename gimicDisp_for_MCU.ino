@@ -213,6 +213,11 @@ void recv(int len) {
       button_ipol = data; // 読み取るだけ
     }
     else if (address == 0x09) {
+      if ((data & 0x01) == 0) {
+        // リセット要求に応える
+        watchdog_enable(1, 1);
+        while(1);
+      }
 #ifdef LED_BUILTIN
       digitalWrite(LED_BUILTIN, (data & 0x02)?LOW:HIGH);  // led g
 #endif
