@@ -40,15 +40,8 @@ void EscSeqParser::ParseByte(uint8_t inbyte)
 {
 	if ((mEscapeState == 0) || (inbyte < 0x20) || (inbyte >= 0x80)) {
 		mEscapeState = 0;
+#if !defined(ARDUINO)
 		if ((mTwobyte_1st_char != 0) && (inbyte >= 0x40) && (inbyte < 0xfd) && (inbyte != 0x7f)) {
-#if defined(ARDUINO)
-			char outbuf[3];
-			outbuf[0] = mTwobyte_1st_char;
-			outbuf[1] = inbyte;
-			outbuf[2] = 0;
-			mDisp->puts_(outbuf);
-			mTwobyte_1st_char = 0;
-#else
 			// SJIS文字をUTF8に変換
 			char inbuf[3];
 			char outbuf[8];
@@ -68,9 +61,9 @@ void EscSeqParser::ParseByte(uint8_t inbyte)
 #endif
 			mDisp->puts_(outbuf);
 			mTwobyte_1st_char = 0;
-#endif
 		}
 		else {
+#endif
 			mTwobyte_1st_char = 0;
 			switch (inbyte) {
 				case 0x08:	// TODO: BS
@@ -92,6 +85,13 @@ void EscSeqParser::ParseByte(uint8_t inbyte)
 				case 0x7f:	// TODO: DEL
 					break;
 				default:
+#if defined(ARDUINO)
+          {
+            char str[2] = {0,0};
+						str[0] = inbyte;
+						mDisp->puts_(str);
+          }
+#else
 					if ((inbyte >= 0x20) && (inbyte < 0x7f)) {
 						char str[2] = {0,0};
 						str[0] = inbyte;
@@ -101,12 +101,6 @@ void EscSeqParser::ParseByte(uint8_t inbyte)
 						mTwobyte_1st_char = inbyte;
 					}
 					else if ((inbyte >= 0xa1) && (inbyte < 0xe0)) {
-#if defined(ARDUINO)
-						char str[2] = { 0,0 };
-						str[0] = inbyte;
-						mDisp->puts_(str);
-						mTwobyte_1st_char = 0;
-#else
 						// 半角カナ文字をUTF8に変換
 						char inbuf[2];
 						char outbuf[8];
@@ -125,9 +119,9 @@ void EscSeqParser::ParseByte(uint8_t inbyte)
 #endif
 						mDisp->puts_(outbuf);
 						mTwobyte_1st_char = 0;
-#endif
 					}
 			}
+#endif
 		}
 	}
 	else {

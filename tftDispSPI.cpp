@@ -245,9 +245,8 @@ void tftDispSPI::puts_(const char* str, uint32_t max_len)
   int endLine = VIEW_HEIGHT / sTextHeight[mFontType];
 
   do {
-    static char lineText[81];
-    int lineLen = getLineLength(&str[startCol]);
-    strlcpy(lineText, &str[startCol], (lineLen > 80)?81:(lineLen+1));
+    const char *lineText = &str[startCol];
+    int lineLen = getLineLength(lineText);
     int lineStartPosX = mTextPosX;
     int lineStartY = mTextPosY * textHeight;
     int lineEndY = (mTextPosY + 1) * textHeight;
@@ -256,12 +255,15 @@ void tftDispSPI::puts_(const char* str, uint32_t max_len)
     // テキストを1文字ずつ描画
     int drawPos = 0;
     int screenCharInd = (rowChars * mTextPosY + mTextPosX) * 3;
-    while (lineText[drawPos] != 0) {
+    while (drawPos < lineLen) {
       if (mReading2ByteCode) {
         // 2バイト文字はバッファリングして句点コードの並びに変換する
-        if (((mScreenChars[screenCharInd] != back_foreColor) || (mScreenChars[screenCharInd+1] != mFontStyle) || (mScreenChars[screenCharInd+2] != mGlyphFirstByte) ||
-          /*(back_foreColor != mScreenChars[screenCharInd+2]) ||*/ (mScreenChars[screenCharInd+3] != lineText[drawPos])) &&
-          (mTextPosX < rowChars) && (mTextPosY < endLine)) {
+        if ((mTextPosX < rowChars) && (mTextPosY < endLine) &&
+          ((mScreenChars[screenCharInd] != back_foreColor) ||
+          (mScreenChars[screenCharInd+1] != mFontStyle) ||
+          (mScreenChars[screenCharInd+2] != mGlyphFirstByte) ||
+          /*(back_foreColor != mScreenChars[screenCharInd+2]) ||*/
+          (mScreenChars[screenCharInd+3] != lineText[drawPos]))) {
           mScreenChars[screenCharInd] = back_foreColor;
           mScreenChars[screenCharInd+1] = mFontStyle;
           mScreenChars[screenCharInd+2] = mGlyphFirstByte;
@@ -283,8 +285,10 @@ void tftDispSPI::puts_(const char* str, uint32_t max_len)
           mReading2ByteCode = true;
         }
         else {
-          if (((mScreenChars[screenCharInd] != back_foreColor) || (mScreenChars[screenCharInd+1] != mFontStyle) || (mScreenChars[screenCharInd+2] != lineText[drawPos])) &&
-              (mTextPosX < rowChars) && (mTextPosY < endLine)) {
+          if ((mTextPosX < rowChars) && (mTextPosY < endLine) && 
+              ((mScreenChars[screenCharInd] != back_foreColor) ||
+              (mScreenChars[screenCharInd+1] != mFontStyle) ||
+              (mScreenChars[screenCharInd+2] != lineText[drawPos]))) {
             mScreenChars[screenCharInd] = back_foreColor;
             mScreenChars[screenCharInd+1] = mFontStyle;
             mScreenChars[screenCharInd+2] = lineText[drawPos];
