@@ -18,10 +18,10 @@ uint8_t button_ipol=0;
 volatile bool i2c_reading;
 uint8_t i2c_reading_address;
 uint32_t updateTime;
-uint32_t keepAliveTime;
+// uint32_t keepAliveTime;
 uint32_t tpUpdateTime;
 uint32_t lastTpDownTime;
-bool  connected=false;
+// bool  connected=false;
 uint16_t tp_X, tp_Y, tp_On=0;
 
 tftDispSPI tft;
@@ -97,7 +97,7 @@ void loop1() {
   uint32_t updateStartTime = millis();
   while (Serial1.available() > 0) {
     parser.ParseByte(Serial1.read());
-    connected = true;
+    // connected = true;
   }
   // while (Serial.available() > 0) {
   //   parser.ParseByte(Serial.read());
@@ -106,16 +106,6 @@ void loop1() {
   if ((millis() - updateTime) > 10) {
     if (tft.updateContent())
       updateTime = millis();
-  }
-
-  if ((millis() - keepAliveTime) > 3500) {
-    if (connected) {
-      showStartupScreen();
-      connected = false;
-    }
-  }
-  else {
-    connected = true;
   }
 
   if ((millis() - tpUpdateTime) > 10) {
@@ -152,6 +142,16 @@ void loop1() {
       }
     }
   }
+
+  // if ((millis() - keepAliveTime) > 3500) {
+  //   if (connected) {
+  //     showStartupScreen();
+  //     connected = false;
+  //   }
+  // }
+  // else {
+  //   connected = true;
+  // }
 
   if (Serial1.overflow()) {
     Serial1.flush();
@@ -230,7 +230,7 @@ void req() {
     i2c_reading = false;
     if (i2c_reading_address == 0x09) {
       Wire1.write(button_input);
-      keepAliveTime = millis();
+      // keepAliveTime = millis();
     }
     else {
       Wire1.write(0);
