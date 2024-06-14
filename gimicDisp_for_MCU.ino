@@ -10,6 +10,7 @@
 #include "tftDispSPI.h"
 #include "EscSeqParser.h"
 #include <Wire.h>
+#include <EEPROM.h>
 
 void recv(int len);
 void req();
@@ -35,6 +36,45 @@ enum MouseButtons {
 	MOUSE_BTN_DBL_CLK	= (1 << 4),
   IS_TP             = (1 << 5)
 };
+
+void doTPCallibration() {
+  int onCount = 0;
+  for (int i=0; i<5; ++i) {
+    if(digitalRead(BUTTON1_PIN_NO) == LOW) {
+      ++onCount;
+    }
+  }
+  EEPROM.begin(256);
+  uint8_t calData[10];
+  if (onCount >= 3) {
+    tft.touch_calibrate((uint16_t*)calData);
+    // キャリブレーション値をFlash領域に保存
+    for (int i=0; i<10; ++i) {
+      EEPROM.write(i, calData[i]);
+    }
+    EEPROM.commit();
+  }
+  else {
+    int initialCnt = 0;
+    // キャリブレーション値をFlash領域から読み出す
+    for (int i=0; i<10; ++i) {
+      calData[i] = EEPROM.read(i);
+      if (calData[i] == 0xff) {
+        ++initialCnt;
+      }
+    }
+    // 初期状態ならキャリブレーションを実行する
+    if (initialCnt == 10) {
+      tft.touch_calibrate((uint16_t*)calData);
+      for (int i=0; i<10; ++i) {
+        EEPROM.write(i, calData[i]);
+      }
+      EEPROM.commit();
+    }
+  }
+  EEPROM.end();
+  tft.set_calibrate((uint16_t*)calData);
+}
 
 void setup() {
   Wire1.setSDA(2);
@@ -77,6 +117,8 @@ void setup1() {
   Serial1.begin(115200);
 
   tft.init();
+
+  doTPCallibration();
 
   showStartupScreen();
 }

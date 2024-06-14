@@ -247,6 +247,8 @@ public:
 	
   void  setCursorPointer(int16_t x, int16_t y);
   void  hideCursorPointer();
+  void  touch_calibrate(uint16_t *calData);
+  void  set_calibrate(const uint16_t *calData);
 
 private:
 	enum FontType {

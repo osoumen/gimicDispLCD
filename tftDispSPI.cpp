@@ -8,7 +8,7 @@
 #include "misaki_gothic.h"
 #include "image.h"
 
-// #define ENABLE_CURSOR_POINTER 1
+#define ENABLE_CURSOR_POINTER 1
 
 const uint16_t imgcurs[] PROGMEM = {
     8, 12,
@@ -135,10 +135,36 @@ void tftDispSPI::init()
   set_charsize(kNormalFont);
   memset(mScreenChars, 0, (3 * VIEW_WIDTH * VIEW_HEIGHT) / (sTextHeight[kNormalFont] * sTextWidth[kNormalFont]));
   mTft.initDMA();
+}
 
-  // TODO: キャリブレーション処理で得た値を使用する
-  uint16_t calData[5] = { 420, 3487, 287, 3524, 3 };
-  mTft.setTouch(calData);
+void  tftDispSPI::touch_calibrate(uint16_t *calData)
+{
+  uint8_t calDataOK = 0;
+
+  mTft.fillScreen(TFT_BLACK);
+  mTft.setCursor(20, 0);
+  mTft.setTextFont(2);
+  mTft.setTextSize(1);
+  mTft.setTextColor(TFT_WHITE, TFT_BLACK);
+
+  mTft.println("Touch corners as indicated");
+
+  mTft.setTextFont(1);
+  mTft.println();
+
+  mTft.calibrateTouch(calData, TFT_MAGENTA, TFT_BLACK, 15);
+
+  mTft.fillScreen(TFT_BLACK);
+  
+  mTft.setTextColor(TFT_GREEN, TFT_BLACK);
+  mTft.println("Calibration complete!");
+
+  delay(3000);
+}
+
+void  tftDispSPI::set_calibrate(const uint16_t *calData)
+{
+  mTft.setTouch((uint16_t *)calData);
 }
 
 bool  tftDispSPI::getTouch(uint16_t *x, uint16_t *y)
