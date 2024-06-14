@@ -5,6 +5,7 @@
 #define BUTTON5_PIN_NO  26
 
 #define ENABLE_MULTI_CORE 1
+// #define ENABLE_SERIAL_OUT 1
 
 #include "tftDispSPI.h"
 #include "EscSeqParser.h"
@@ -18,10 +19,8 @@ uint8_t button_ipol=0;
 volatile bool i2c_reading;
 uint8_t i2c_reading_address;
 uint32_t updateTime;
-// uint32_t keepAliveTime;
 uint32_t tpUpdateTime;
 uint32_t lastTpDownTime;
-// bool  connected=false;
 uint16_t tp_X, tp_Y, tp_On=0;
 
 tftDispSPI tft;
@@ -54,8 +53,6 @@ void setup() {
 
 void setup1() {
 #endif
-
-  //Serial.begin(115200);
   pinMode(BUTTON1_PIN_NO, INPUT_PULLUP);
   gpio_set_input_hysteresis_enabled (BUTTON1_PIN_NO, true);
   pinMode(BUTTON2_PIN_NO, INPUT_PULLUP);
@@ -71,6 +68,10 @@ void setup1() {
   attachInterrupt(digitalPinToInterrupt(BUTTON3_PIN_NO), buttonChange3, CHANGE);
   attachInterrupt(digitalPinToInterrupt(BUTTON4_PIN_NO), buttonChange4, CHANGE);
   attachInterrupt(digitalPinToInterrupt(BUTTON5_PIN_NO), buttonChange5, CHANGE);
+
+#ifdef ENABLE_SERIAL_OUT
+  Serial.begin(115200);
+#endif
   Serial1.setPinout(0, 1);
   Serial1.setFIFOSize(4096);
   Serial1.begin(115200);
@@ -97,7 +98,6 @@ void loop1() {
   uint32_t updateStartTime = millis();
   while (Serial1.available() > 0) {
     parser.ParseByte(Serial1.read());
-    // connected = true;
   }
   // while (Serial.available() > 0) {
   //   parser.ParseByte(Serial.read());
@@ -141,17 +141,10 @@ void loop1() {
         tp_Y = y;
       }
     }
+  #ifdef ENABLE_SERIAL_OUT
+    Serial.println(updateTime - updateStartTime);
+  #endif
   }
-
-  // if ((millis() - keepAliveTime) > 3500) {
-  //   if (connected) {
-  //     showStartupScreen();
-  //     connected = false;
-  //   }
-  // }
-  // else {
-  //   connected = true;
-  // }
 
   if (Serial1.overflow()) {
     Serial1.flush();
@@ -230,7 +223,6 @@ void req() {
     i2c_reading = false;
     if (i2c_reading_address == 0x09) {
       Wire1.write(button_input);
-      // keepAliveTime = millis();
     }
     else {
       Wire1.write(0);
