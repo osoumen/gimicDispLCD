@@ -6,6 +6,7 @@
 
 #define ENABLE_MULTI_CORE 1
 // #define ENABLE_SERIAL_OUT 1
+#define TOUCH_THRESHOLD 300
 
 #include "tftDispSPI.h"
 #include "EscSeqParser.h"
@@ -150,7 +151,7 @@ void loop1() {
       updateTime = millis();
 
       uint16_t x,y;
-      bool isOn = tft.getTouch(&x, &y);
+      bool isOn = tft.getTouch(&x, &y, TOUCH_THRESHOLD);
       if (isOn == false && tp_On == true) {
         Serial1.printf("\x1b[<%d;%d;%dM", MOUSE_BTN1_REL | IS_TP, x, y);
         // Serial.printf("\x1b[<%d;%d;%dM\n", MOUSE_BTN1_REL | IS_TP, x, y);

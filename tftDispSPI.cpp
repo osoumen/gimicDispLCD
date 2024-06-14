@@ -167,9 +167,9 @@ void  tftDispSPI::set_calibrate(const uint16_t *calData)
   mTft.setTouch((uint16_t *)calData);
 }
 
-bool  tftDispSPI::getTouch(uint16_t *x, uint16_t *y)
+bool  tftDispSPI::getTouch(uint16_t *x, uint16_t *y, uint16_t threshold)
 {
-  return mTft.getTouch(x, y);
+  return mTft.getTouch(x, y, threshold);
 }
 
 uint16_t tftDispSPI::sjisToLiner(uint16_t sjis)
