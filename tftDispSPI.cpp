@@ -8,6 +8,24 @@
 #include "misaki_gothic.h"
 #include "image.h"
 
+// #define ENABLE_CURSOR_POINTER 1
+
+const uint16_t imgcurs[] PROGMEM = {
+    8, 12,
+    0x0000,0xFFFF,0xFFFF,0xFFFF,0xFFFF,0xFFFF,0xFFFF,0xFFFF,
+    0x0000,0x0000,0xFFFF,0xFFFF,0xFFFF,0xFFFF,0xFFFF,0xFFFF,
+    0x0000,0x3CE7,0x0000,0xFFFF,0xFFFF,0xFFFF,0xFFFF,0xFFFF,
+    0x0000,0x3CE7,0x3CE7,0x0000,0xFFFF,0xFFFF,0xFFFF,0xFFFF,
+    0x0000,0x3CE7,0x3CE7,0x3CE7,0x0000,0xFFFF,0xFFFF,0xFFFF,
+    0x0000,0x3CE7,0x3CE7,0x3CE7,0x3CE7,0x0000,0xFFFF,0xFFFF,
+    0x0000,0x3CE7,0x3CE7,0x3CE7,0x3CE7,0x3CE7,0x0000,0xFFFF,
+    0x0000,0x3CE7,0x3CE7,0x3CE7,0x0000,0x0000,0x0000,0xFFFF,
+    0x0000,0x3CE7,0x0000,0x0000,0x0000,0xFFFF,0xFFFF,0xFFFF,
+    0x0000,0x0000,0xFFFF,0x0000,0x0000,0xFFFF,0xFFFF,0xFFFF,
+    0xFFFF,0xFFFF,0xFFFF,0x0000,0x0000,0x0000,0xFFFF,0xFFFF,
+    0xFFFF,0xFFFF,0xFFFF,0xFFFF,0x0000,0x0000,0xFFFF,0xFFFF,
+};
+
 const int sFontHeight[3] PROGMEM = {8, 11, 16};
 const int sTextHeight[3] PROGMEM = {8, 12, 16};
 const int sTextWidth[3] PROGMEM = {4, 5, 8};
@@ -51,6 +69,7 @@ tftDispSPI::tftDispSPI()
 , TFT_eSprite(&mTft)
 , TFT_eSprite(&mTft)}
 , mTmpSpr(&mTft)
+, mCursSpr(&mTft)
 , mTextSprPtr{nullptr
 , nullptr
 , nullptr
@@ -82,6 +101,7 @@ tftDispSPI::tftDispSPI()
 , nullptr
 , nullptr}
 , mTmpSprPtr(nullptr)
+, mCursSprPtr(nullptr)
 , mUpdateStartY(VIEW_HEIGHT)
 , mUpdateEndY(0)
 , mTextPosX(0)
@@ -91,6 +111,8 @@ tftDispSPI::tftDispSPI()
 , mFontStyle(0)
 , mGlyphFirstByte(0)
 , mReading2ByteCode(0)
+, mPointerX(-POINTER_POSY_SIZE)
+, mPointerY(-POINTER_POSY_SIZE)
 {
 }
 
@@ -107,6 +129,9 @@ void tftDispSPI::init()
   mBgSpr.setColorDepth(16);
   mBgSpr.fillSprite(TFT_BLACK);
   mBgSprPtr = (uint16_t*)mBgSpr.createSprite(VIEW_WIDTH, VIEW_HEIGHT);
+  mCursSpr.setColorDepth(16);
+  mCursSprPtr = (uint16_t*)mCursSpr.createSprite(imgcurs[0], imgcurs[1]);
+  mCursSpr.pushImage(0, 0, imgcurs[0], imgcurs[1], &imgcurs[2]);
   set_charsize(kNormalFont);
   memset(mScreenChars, 0, (3 * VIEW_WIDTH * VIEW_HEIGHT) / (sTextHeight[kNormalFont] * sTextWidth[kNormalFont]));
   mTft.initDMA();
@@ -173,6 +198,15 @@ bool tftDispSPI::updateContent()
     for (int i=updateStartRow; i<updateEndRow; ++i) {
       mTmpSpr.pushImage(0, 0, VIEW_WIDTH, textHeight, mBgSprPtr+VIEW_WIDTH*i*textHeight);
       blend4bppImageToBRG555(mTextSprPtr[i], mTmpSprPtr, VIEW_WIDTH, textHeight, TFT_EDISP_TRANSPARENT, default_4bit_palette);// mTextSpr[i].pushToSprite(&mTmpSpr, 0, 0, TFT_EDISP_TRANSPARENT);
+#if defined(ENABLE_CURSOR_POINTER)
+      int tmpSprSt = i*textHeight;
+      int tmpSprEd = (i+1)*textHeight;
+      int pointerEdge1 = mPointerY - POINTER_NEGY_SIZE;
+      int pointerEdge2 = mPointerY + POINTER_POSY_SIZE;
+      if ((tmpSprSt <= pointerEdge1 && pointerEdge1 < pointerEdge1) || (tmpSprSt <= pointerEdge2 && pointerEdge1 < pointerEdge2)) {
+        mCursSpr.pushToSprite(&mTmpSpr, mPointerX, mPointerY - tmpSprSt, TFT_WHITE);
+      }
+#endif
       mTft.startWrite();
       mTft.pushImageDMA(0, i*textHeight, VIEW_WIDTH, textHeight, mTmpSprPtr);
       mTft.endWrite();
@@ -730,4 +764,23 @@ void tftDispSPI::draw_image(int file, int bg, int x, int y)
 void tftDispSPI::draw_image2(int file, int bg, int fol, int x, int y)
 {
   // image2は未使用
+}
+
+void  tftDispSPI::setCursorPointer(int16_t x, int16_t y)
+{
+#if defined(ENABLE_CURSOR_POINTER)
+  setUpdateArea(mPointerY - POINTER_NEGY_SIZE, mPointerY + POINTER_POSY_SIZE);
+  mPointerX = x;
+  mPointerY = y;
+  setUpdateArea(mPointerY - POINTER_NEGY_SIZE, mPointerY + POINTER_POSY_SIZE);
+#endif
+}
+
+void  tftDispSPI::hideCursorPointer()
+{
+#if defined(ENABLE_CURSOR_POINTER)
+  setUpdateArea(mPointerY - POINTER_NEGY_SIZE, mPointerY + POINTER_POSY_SIZE);
+  mPointerX = -POINTER_POSY_SIZE;
+  mPointerY = -POINTER_POSY_SIZE;
+#endif
 }

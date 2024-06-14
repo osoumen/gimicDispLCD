@@ -104,41 +104,41 @@ void loop1() {
   // }
 
   if ((millis() - updateTime) > 10) {
-    if (tft.updateContent())
+    if (tft.updateContent()) {
       updateTime = millis();
-  }
 
-  if ((millis() - tpUpdateTime) > 10) {
-    tpUpdateTime = millis();
-    uint16_t x,y;
-    bool isOn = tft.getTouch(&x, &y);
-    if (isOn == false && tp_On == true) {
-      Serial1.printf("\x1b[<%d;%d;%dM", MOUSE_BTN1_REL | IS_TP, x, y);
-      // Serial.printf("\x1b[<%d;%d;%dM\n", MOUSE_BTN1_REL | IS_TP, x, y);
-      tp_X = x;
-      tp_Y = y;
-      tp_On = false;
-    }
-    else if (isOn) {
-      int btnState = IS_TP;
-      if (tp_On == false) {
-        btnState |= MOUSE_BTN1;
-        if ((millis() - lastTpDownTime) < 500) {   // TODO: ダブルタップ時間を調整
-          int distance_x = (tp_X - x);
-          int distance_y = (tp_Y - y);
-          if ((distance_x * distance_x + distance_y * distance_y) < 16*16) {
-            btnState |= MOUSE_BTN_DBL_CLK;
-          }
-        }
-        tp_X = tp_Y = 9999;
-        tp_On = true;
-        lastTpDownTime = millis();
-      }
-      if ((x != tp_X) || (y != tp_Y)) {
-        Serial1.printf("\x1b[<%d;%d;%dM", btnState, x, y);
-        // Serial.printf("\x1b[<%d;%d;%dM\n", btnState, x, y);
+      uint16_t x,y;
+      bool isOn = tft.getTouch(&x, &y);
+      if (isOn == false && tp_On == true) {
+        Serial1.printf("\x1b[<%d;%d;%dM", MOUSE_BTN1_REL | IS_TP, x, y);
+        // Serial.printf("\x1b[<%d;%d;%dM\n", MOUSE_BTN1_REL | IS_TP, x, y);
         tp_X = x;
         tp_Y = y;
+        tp_On = false;
+        tft.hideCursorPointer();
+      }
+      else if (isOn) {
+        int btnState = IS_TP;
+        if (tp_On == false) {
+          btnState |= MOUSE_BTN1;
+          if ((millis() - lastTpDownTime) < 500) {   // TODO: ダブルタップ時間を調整
+            int distance_x = (tp_X - x);
+            int distance_y = (tp_Y - y);
+            if ((distance_x * distance_x + distance_y * distance_y) < 16*16) {
+              btnState |= MOUSE_BTN_DBL_CLK;
+            }
+          }
+          tp_X = tp_Y = 9999;
+          tp_On = true;
+          lastTpDownTime = millis();
+        }
+        if ((x != tp_X) || (y != tp_Y)) {
+          Serial1.printf("\x1b[<%d;%d;%dM", btnState, x, y);
+          // Serial.printf("\x1b[<%d;%d;%dM\n", btnState, x, y);
+          tp_X = x;
+          tp_Y = y;
+        }
+        tft.setCursorPointer(x, y);
       }
     }
   #ifdef ENABLE_SERIAL_OUT

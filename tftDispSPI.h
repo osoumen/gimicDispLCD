@@ -245,6 +245,9 @@ public:
 // protected:
 	void puts_(const char* str, uint32_t max_len=0);
 	
+  void  setCursorPointer(int16_t x, int16_t y);
+  void  hideCursorPointer();
+
 private:
 	enum FontType {
 		kTinyFont = 0,
@@ -261,14 +264,18 @@ private:
 	static const int	STYLE_BLINKED = 0x04;
 	static const int	STYLE_INVERTED = 0x08;
   static const int  TFT_EDISP_TRANSPARENT = 15;
+  static const int  POINTER_POSY_SIZE = 12;
+  static const int  POINTER_NEGY_SIZE = 0;
 
   TFT_eSPI      mTft;
   TFT_eSprite   mBgSpr;
   TFT_eSprite   mTextSpr[MAX_LINES];
   TFT_eSprite   mTmpSpr;
+  TFT_eSprite   mCursSpr;
   uint16_t*     mBgSprPtr;
   uint16_t*     mTextSprPtr[MAX_LINES];
   uint16_t*     mTmpSprPtr;
+  uint16_t*     mCursSprPtr;
   int           mFontType;
   int           mUpdateStartY;
   int           mUpdateEndY;
@@ -287,6 +294,8 @@ private:
 #ifdef SINGLEBYTEGLYPH_TO_RAM
   static uint8_t mAsciiGlyphCatch[16*256];
 #endif
+  int16_t       mPointerX;
+  int16_t       mPointerY;
 
   static uint16_t    sjisToLiner(uint16_t sjis);
 	static int	getLineLength(const char *str);
