@@ -719,6 +719,7 @@ void tftDispSPI::draw_rectangle(int bg, int w, int h, int x, int y, int col)
 
 void tftDispSPI::draw_image(int file, int bg, int x, int y)
 {
+  if (file > 117) return;
   const uint16_t  *imagePtr = imgArray[file];
   if (imagePtr != nullptr) {
     mBgSpr.pushImage(x, y, imagePtr[0], imagePtr[1], &imagePtr[2]);
