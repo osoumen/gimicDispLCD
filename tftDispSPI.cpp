@@ -128,11 +128,11 @@ bool  tftDispSPI::getTouch(uint16_t *x, uint16_t *y, uint16_t threshold)
   return mTft.getTouch(x, y, threshold);
 }
 
-uint16_t tftDispSPI::sjisToLiner(uint16_t sjis)
+int tftDispSPI::sjisToLiner(int sjis)
 {
-  uint16_t linear;
-  uint8_t up = sjis >> 8;
-  uint8_t lo = sjis & 0xff;
+  int linear;
+  int up = sjis >> 8;
+  int lo = sjis & 0xff;
   if (0x81 <= up && up <= 0x9f) {
     linear = up - 0x81;
   }
@@ -168,8 +168,9 @@ bool tftDispSPI::updateContent()
     const int updateStartRow = mUpdateStartY / textHeight;
     const int updateEndRow = (mUpdateEndY + textHeight - 1) / textHeight;
     for (int i=updateStartRow; i<updateEndRow; ++i) {
+      // 背景のコピー
       mTmpSpr.pushImage(0, 0, VIEW_WIDTH, textHeight, mBgSprPtr+VIEW_WIDTH*i*textHeight);
-
+      // 文字の描画
       char glyphFirstByte;
       bool reading2ByteCode = false;
       const char *lineText = &mScreenChars[rowChars * i * 3]; 
@@ -181,8 +182,7 @@ bool tftDispSPI::updateContent()
           int twoByteGlyph = sjisToLiner((glyphFirstByte << 8) | glyph);
           uint16_t fg_color = edisp_4bit_palette[fontColor & 0x0f];
           uint16_t bg_color = edisp_4bit_palette[fontColor >> 4];
-          // mTmpSpr.drawXBitmap((drawPos-1)*textWidth,0,m2ByteGlyphData+m2ByteGlyphBytes*twoByteGlyph,textWidth*2,fontHeight,fg_color);
-          drawGlyphToBRG555Buffer(m2ByteGlyphData+m2ByteGlyphBytes*twoByteGlyph, mTmpSprPtr, (drawPos-1)*textWidth, textWidth*2,fontHeight,fg_color,bg_color);
+          drawGlyphTo16bppBuffer(m2ByteGlyphData+m2ByteGlyphBytes*twoByteGlyph, mTmpSprPtr, (drawPos-1)*textWidth, textWidth*2,fontHeight,fg_color,bg_color);
           reading2ByteCode = false;
         }
         else {
@@ -200,8 +200,7 @@ bool tftDispSPI::updateContent()
                 }
               }
               else {
-                // mTmpSpr.drawXBitmap(drawPos*textWidth,0,mAsciiGlyphData+mAsciiGlyphBytes*glyph,textWidth,fontHeight,fg_color,bg_color);
-                drawGlyphToBRG555Buffer(mAsciiGlyphData+mAsciiGlyphBytes*glyph, mTmpSprPtr, drawPos*textWidth, textWidth,fontHeight,fg_color,bg_color);
+                drawGlyphTo16bppBuffer(mAsciiGlyphData+mAsciiGlyphBytes*glyph, mTmpSprPtr, drawPos*textWidth, textWidth,fontHeight,fg_color,bg_color);
               }
             }
           }
@@ -241,17 +240,16 @@ bool tftDispSPI::updateContent()
   return true;
 }
 
-void  tftDispSPI::drawGlyphToBRG555Buffer(const uint8_t *glyphSt, uint16_t *dst, uint16_t xpos, uint16_t fontWidth, uint16_t fontHeight, uint16_t foreColor, uint16_t backColor)
+void  tftDispSPI::drawGlyphTo16bppBuffer(const uint8_t *glyphSt, uint16_t *dst, uint16_t xpos, uint16_t fontWidth, uint16_t fontHeight, uint16_t foreColor, uint16_t backColor)
 {
-  // uint8_t buf[32];
-  // memcpy(buf, glyphSt, ((fontWidth + 7)>>3) * fontHeight);
   const uint8_t *readPtr = glyphSt;
+  dst += xpos;
   for (int row=0; row<fontHeight; ++row) {
-    uint16_t *out = dst + (xpos + VIEW_WIDTH * row);
-    int x=0;
+    uint16_t *out = dst;
+    uint16_t *out_end = dst + fontWidth;
     int shift=0;
     uint8_t inByte;
-    while (x<fontWidth) {
+    while (out < out_end) {
       if (shift == 0) {
         inByte = *(readPtr++);
       }
@@ -263,8 +261,8 @@ void  tftDispSPI::drawGlyphToBRG555Buffer(const uint8_t *glyphSt, uint16_t *dst,
       ++out;
       inByte >>= 1;
       shift = (shift + 1) & 0x07;
-      ++x;
     }
+    dst += VIEW_WIDTH;
   }
 }
 
