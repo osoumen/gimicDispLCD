@@ -242,6 +242,8 @@ public:
 
   bool  getTouch(uint16_t *x, uint16_t *y, uint16_t threshold=600);
 
+  void lcdPushProc();
+
 // protected:
 	void puts_(const char* str, uint32_t max_len=0);
 	
@@ -271,11 +273,14 @@ private:
 
   TFT_eSPI      mTft;
   TFT_eSprite   mBgSpr;
-  TFT_eSprite   mTmpSpr;
+  TFT_eSprite   mTmpSpr[2];
   TFT_eSprite   mCursSpr;
   uint16_t*     mBgSprPtr;
-  uint16_t*     mTmpSprPtr;
+  uint16_t*     mTmpSprPtr[2];
   uint16_t*     mCursSprPtr;
+  uint16_t      mTmpSprYPos[2];
+  int           mWriteTmpSpr;
+  int           mReadTmpSpr;
   int           mFontType;
   int           mUpdateStartY;
   int           mUpdateEndY;

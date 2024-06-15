@@ -134,6 +134,7 @@ void showStartupScreen() {
 
 void loop() {
 #ifdef ENABLE_MULTI_CORE
+  tft.lcdPushProc();
 }
 
 void loop1() {

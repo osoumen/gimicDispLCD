@@ -9,6 +9,7 @@
 #include "image.h"
 
 #define ENABLE_CURSOR_POINTER 1
+// #define DO_PUSHIMAGE_IN_ANOTHERCORE 1
 
 const uint16_t imgcurs[] PROGMEM = {
     8, 12,
@@ -55,12 +56,19 @@ char   tftDispSPI::mScreenChars[MAX_LINES*MAX_COLUMNS*3];
 uint8_t tftDispSPI::mAsciiGlyphCatch[16*256];
 #endif
 
+#ifdef DO_PUSHIMAGE_IN_ANOTHERCORE
+semaphore_t xSemLcdPushWait;
+semaphore_t xSemLcdPushMutex;
+#endif
+
 tftDispSPI::tftDispSPI()
 : mBgSpr(&mTft)
-, mTmpSpr(&mTft)
+, mTmpSpr{TFT_eSprite(&mTft), TFT_eSprite(&mTft)}
 , mCursSpr(&mTft)
-, mTmpSprPtr(nullptr)
+, mTmpSprPtr{nullptr, nullptr}
 , mCursSprPtr(nullptr)
+, mWriteTmpSpr(0)
+, mReadTmpSpr(0)
 , mUpdateStartY(VIEW_HEIGHT)
 , mUpdateEndY(0)
 , mTextPosX(0)
@@ -91,6 +99,10 @@ void tftDispSPI::init()
   set_charsize(kNormalFont);
   memset(mScreenChars, 0, (3 * VIEW_WIDTH * VIEW_HEIGHT) / (sTextHeight[kNormalFont] * sTextWidth[kNormalFont]));
   mTft.initDMA();
+#ifdef DO_PUSHIMAGE_IN_ANOTHERCORE
+  sem_init(&xSemLcdPushWait, 0, 2);
+  sem_init(&xSemLcdPushMutex, 2, 2);
+#endif
 }
 
 void  tftDispSPI::touch_calibrate(uint16_t *calData)
@@ -160,7 +172,9 @@ int tftDispSPI::sjisToLiner(int sjis)
 bool tftDispSPI::updateContent()
 {
 	if (mUpdateStartY < mUpdateEndY) {
+  #ifndef DO_PUSHIMAGE_IN_ANOTHERCORE
     if (mTft.dmaBusy()) return false;
+  #endif
     const int fontHeight = sFontHeight[mFontType];
     const int textHeight = sTextHeight[mFontType];
     const int textWidth = sTextWidth[mFontType];
@@ -168,8 +182,11 @@ bool tftDispSPI::updateContent()
     const int updateStartRow = mUpdateStartY / textHeight;
     const int updateEndRow = (mUpdateEndY + textHeight - 1) / textHeight;
     for (int i=updateStartRow; i<updateEndRow; ++i) {
+#ifdef DO_PUSHIMAGE_IN_ANOTHERCORE
+      sem_acquire_blocking(&xSemLcdPushMutex);
+#endif
       // 背景のコピー
-      mTmpSpr.pushImage(0, 0, VIEW_WIDTH, textHeight, mBgSprPtr+VIEW_WIDTH*i*textHeight);
+      mTmpSpr[mWriteTmpSpr].pushImage(0, 0, VIEW_WIDTH, textHeight, mBgSprPtr+VIEW_WIDTH*i*textHeight);
       // 文字の描画
       char glyphFirstByte;
       bool reading2ByteCode = false;
@@ -182,7 +199,7 @@ bool tftDispSPI::updateContent()
           int twoByteGlyph = sjisToLiner((glyphFirstByte << 8) | glyph);
           uint16_t fg_color = edisp_4bit_palette[fontColor & 0x0f];
           uint16_t bg_color = edisp_4bit_palette[fontColor >> 4];
-          drawGlyphTo16bppBuffer(m2ByteGlyphData+m2ByteGlyphBytes*twoByteGlyph, mTmpSprPtr, (drawPos-1)*textWidth, textWidth*2,fontHeight,fg_color,bg_color);
+          drawGlyphTo16bppBuffer(m2ByteGlyphData+m2ByteGlyphBytes*twoByteGlyph, mTmpSprPtr[mWriteTmpSpr], (drawPos-1)*textWidth, textWidth*2,fontHeight,fg_color,bg_color);
           reading2ByteCode = false;
         }
         else {
@@ -196,11 +213,11 @@ bool tftDispSPI::updateContent()
               uint16_t bg_color = edisp_4bit_palette[fontColor >> 4];
               if (glyph == ' ') {
                 if (bg_color != TFT_TRANSPARENT) {
-                  mTmpSpr.fillRect(drawPos*textWidth,0, textWidth,fontHeight, bg_color);
+                  mTmpSpr[mWriteTmpSpr].fillRect(drawPos*textWidth,0, textWidth,fontHeight, bg_color);
                 }
               }
               else {
-                drawGlyphTo16bppBuffer(mAsciiGlyphData+mAsciiGlyphBytes*glyph, mTmpSprPtr, drawPos*textWidth, textWidth,fontHeight,fg_color,bg_color);
+                drawGlyphTo16bppBuffer(mAsciiGlyphData+mAsciiGlyphBytes*glyph, mTmpSprPtr[mWriteTmpSpr], drawPos*textWidth, textWidth,fontHeight,fg_color,bg_color);
               }
             }
           }
@@ -208,14 +225,14 @@ bool tftDispSPI::updateContent()
         if (fontStyle & STYLE_UNDERLINED) {
           uint16_t fg_color = edisp_4bit_palette[fontColor & 0x0f];
           if (fg_color != TFT_TRANSPARENT) {
-            mTmpSpr.drawFastHLine(drawPos * textWidth, textHeight-1, textWidth, fg_color);
+            mTmpSpr[mWriteTmpSpr].drawFastHLine(drawPos * textWidth, textHeight-1, textWidth, fg_color);
           }
         }
         else if (fontHeight == 11) {
           // 中フォントのサイズは11pxなので12段目を背景色で描画する
           uint16_t bg_color = edisp_4bit_palette[fontColor >> 4];
           if (bg_color != TFT_TRANSPARENT) {
-            mTmpSpr.drawFastHLine(drawPos * textWidth, textHeight-1, textWidth, bg_color);
+            mTmpSpr[mWriteTmpSpr].drawFastHLine(drawPos * textWidth, textHeight-1, textWidth, bg_color);
           }
         }
       }
@@ -226,18 +243,40 @@ bool tftDispSPI::updateContent()
       int pointerEdge1 = mPointerY - POINTER_NEGY_SIZE;
       int pointerEdge2 = mPointerY + POINTER_POSY_SIZE;
       if ((tmpSprSt <= pointerEdge1 && pointerEdge1 < pointerEdge1) || (tmpSprSt <= pointerEdge2 && pointerEdge1 < pointerEdge2)) {
-        mCursSpr.pushToSprite(&mTmpSpr, mPointerX, mPointerY - tmpSprSt, TFT_WHITE);
+        mCursSpr.pushToSprite(&mTmpSpr[mWriteTmpSpr], mPointerX, mPointerY - tmpSprSt, TFT_WHITE);
       }
 #endif
+
+      
+#ifdef DO_PUSHIMAGE_IN_ANOTHERCORE
+      mTmpSprYPos[mWriteTmpSpr] = i*textHeight;
+      sem_release(&xSemLcdPushWait);
+#else
       mTft.startWrite();
-      mTft.pushImageDMA(0, i*textHeight, VIEW_WIDTH, textHeight, mTmpSprPtr);
+      mTft.pushImageDMA(0, i*textHeight, VIEW_WIDTH, textHeight, mTmpSprPtr[mWriteTmpSpr]);
       mTft.endWrite();
+#endif
+      mWriteTmpSpr ^= 1;
     }
 
     mUpdateStartY = VIEW_HEIGHT;
     mUpdateEndY = 0;
 	}
   return true;
+}
+
+void tftDispSPI::lcdPushProc()
+{
+#ifdef DO_PUSHIMAGE_IN_ANOTHERCORE
+  if (mTft.dmaBusy()) return;
+  sem_acquire_blocking(&xSemLcdPushWait);
+  const int textHeight = sTextHeight[mFontType];
+  mTft.startWrite();
+  mTft.pushImageDMA(0, mTmpSprYPos[mReadTmpSpr], VIEW_WIDTH, textHeight, mTmpSprPtr[mReadTmpSpr]);
+  mTft.endWrite();
+  sem_release(&xSemLcdPushMutex);
+  mReadTmpSpr ^= 1;
+#endif
 }
 
 void  tftDispSPI::drawGlyphTo16bppBuffer(const uint8_t *glyphSt, uint16_t *dst, uint16_t xpos, uint16_t fontWidth, uint16_t fontHeight, uint16_t foreColor, uint16_t backColor)
@@ -587,16 +626,18 @@ void tftDispSPI::init_disp(void)
 void tftDispSPI::set_charsize(int x)
 {
   if (mFontType != x) {
-    mFontType = x;
-    if (mTmpSprPtr != nullptr) {
-      mTmpSpr.deleteSprite();
-      mTmpSprPtr = nullptr;
-    }
     int textHeight = sTextHeight[x];
     int textLines = VIEW_HEIGHT / textHeight;
+    mFontType = x;
+    for (int i=0; i<2; ++i) {
+      if (mTmpSprPtr[i] != nullptr) {
+        mTmpSpr[i].deleteSprite();
+        mTmpSprPtr[i] = nullptr;
+      }
+      mTmpSpr[i].setColorDepth(16);
+      mTmpSprPtr[i] = (uint16_t*)mTmpSpr[i].createSprite(VIEW_WIDTH, textHeight);
+    }
     memset(mScreenChars, 0, (3 * VIEW_WIDTH*VIEW_HEIGHT) / (sTextHeight[mFontType] * sTextWidth[mFontType]));
-    mTmpSpr.setColorDepth(16);
-    mTmpSprPtr = (uint16_t*)mTmpSpr.createSprite(VIEW_WIDTH, textHeight);
 
     switch(x) {
       case kTinyFont:
