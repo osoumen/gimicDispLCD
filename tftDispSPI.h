@@ -265,17 +265,15 @@ private:
 	static const int	STYLE_UNDERLINED = 0x02;
 	static const int	STYLE_BLINKED = 0x04;
 	static const int	STYLE_INVERTED = 0x08;
-  static const int  TFT_EDISP_TRANSPARENT = 15;
+  static const int  TFT_EDISP_TRANSPARENT = 0;
   static const int  POINTER_POSY_SIZE = 12;
   static const int  POINTER_NEGY_SIZE = 0;
 
   TFT_eSPI      mTft;
   TFT_eSprite   mBgSpr;
-  TFT_eSprite   mTextSpr[MAX_LINES];
   TFT_eSprite   mTmpSpr;
   TFT_eSprite   mCursSpr;
   uint16_t*     mBgSprPtr;
-  uint16_t*     mTextSprPtr[MAX_LINES];
   uint16_t*     mTmpSprPtr;
   uint16_t*     mCursSprPtr;
   int           mFontType;
@@ -286,8 +284,6 @@ private:
 	uint16_t		  mTextColor;
 	uint16_t		  mTextBgColor;
 	uint8_t 		  mFontStyle;
-  char          mGlyphFirstByte;
-  bool          mReading2ByteCode;
   int           mAsciiGlyphBytes;
   int           m2ByteGlyphBytes;
   const uint8_t *mAsciiGlyphData;
@@ -303,8 +299,7 @@ private:
 	static int	getLineLength(const char *str);
 	void			  setUpdateArea(int startY, int endY);
   uint16_t    conv555To565(int col) { return ((col << 1) & 0xffc0) | (col & 0x1f); }
-  void        drawGlyphTo4bppBuffer(const uint8_t *glyphSt, uint8_t *dst, uint16_t xpos, uint16_t fontWidth, uint16_t fontHeight, uint8_t foreColor, uint8_t backColor);
-  void        blend4bppImageToBRG555(const uint16_t *src, uint16_t *dst, uint16_t width, uint16_t height, uint16_t transpColor, const uint16_t *cmap);
+  void        drawGlyphToBRG555Buffer(const uint8_t *glyphSt, uint16_t *dst, uint16_t xpos, uint16_t fontWidth, uint16_t fontHeight, uint16_t foreColor, uint16_t backColor);
 };
 
 #endif // tftDispSPI_h
