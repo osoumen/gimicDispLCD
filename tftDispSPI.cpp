@@ -257,7 +257,7 @@ void  tftDispSPI::drawGlyphToBRG555Buffer(const uint8_t *glyphSt, uint16_t *dst,
       }
       uint16_t color = (inByte & 1) ? foreColor : backColor;
       if (color != TFT_TRANSPARENT) {
-        color = ((color << 10)&0x7c00) | ((color >> 6)&0x03ff);
+        color = (color << 8) | (color >> 8);
         *out = color;
       }
       ++out;
