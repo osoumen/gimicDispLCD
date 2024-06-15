@@ -281,8 +281,7 @@ private:
   int           mUpdateEndY;
   int     		  mTextPosX;
   int     		  mTextPosY;
-	uint16_t		  mTextColor;
-	uint16_t		  mTextBgColor;
+	uint8_t 		  mTextColor;
 	uint8_t 		  mFontStyle;
   int           mAsciiGlyphBytes;
   int           m2ByteGlyphBytes;

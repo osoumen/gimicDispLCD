@@ -66,7 +66,6 @@ tftDispSPI::tftDispSPI()
 , mTextPosX(0)
 , mTextPosY(0)
 , mTextColor(10)
-, mTextBgColor(TFT_EDISP_TRANSPARENT)
 , mFontStyle(0)
 , mPointerX(-POINTER_POSY_SIZE)
 , mPointerY(-POINTER_POSY_SIZE)
@@ -208,16 +207,16 @@ bool tftDispSPI::updateContent()
           }
         }
         if (fontStyle & STYLE_UNDERLINED) {
-          uint16_t color = edisp_4bit_palette[fontColor & 0x0f];
-          if (color != TFT_TRANSPARENT) {
-            mTmpSpr.drawFastHLine(drawPos * textWidth, textHeight-1, textWidth, color);
+          uint16_t fg_color = edisp_4bit_palette[fontColor & 0x0f];
+          if (fg_color != TFT_TRANSPARENT) {
+            mTmpSpr.drawFastHLine(drawPos * textWidth, textHeight-1, textWidth, fg_color);
           }
         }
         else if (fontHeight == 11) {
           // 中フォントのサイズは11pxなので12段目を背景色で描画する
-          uint16_t color = edisp_4bit_palette[fontColor >> 4];
-          if (color != TFT_TRANSPARENT) {
-            mTmpSpr.drawFastHLine(drawPos * textWidth, textHeight-1, textWidth, color);
+          uint16_t bg_color = edisp_4bit_palette[fontColor >> 4];
+          if (bg_color != TFT_TRANSPARENT) {
+            mTmpSpr.drawFastHLine(drawPos * textWidth, textHeight-1, textWidth, bg_color);
           }
         }
       }
@@ -290,17 +289,8 @@ int tftDispSPI::getLineLength(const char *str)
 
 void tftDispSPI::puts_(const char* str, uint32_t max_len)
 {
-  uint16_t	foreColor;
-  uint16_t	backColor;
-  if (mFontStyle & STYLE_INVERTED) {
-    foreColor = mTextBgColor;
-    backColor = mTextColor;
-  }
-  else {
-    foreColor = mTextColor;
-    backColor = mTextBgColor;
-  }
-  char back_foreColor = (backColor << 4) | foreColor;
+  char back_foreColor = (mFontStyle & STYLE_INVERTED) ? ((mTextColor << 4) | (mTextColor >> 4)) : mTextColor;
+  
   int startCol = 0;
 
   int textHeight = sTextHeight[mFontType];
@@ -395,8 +385,7 @@ void tftDispSPI::set_attribute( int n )
 {
 	switch (n) {
 		case 0:
-			mTextColor = 10;//TFT_WHITE;
-			mTextBgColor = TFT_EDISP_TRANSPARENT;
+			mTextColor = 10 | (TFT_EDISP_TRANSPARENT << 4);//TFT_WHITE;
 			mFontStyle &= ~STYLE_BOLD;
 			mFontStyle &= ~STYLE_UNDERLINED;
 			mFontStyle &= ~STYLE_BLINKED;
@@ -416,68 +405,84 @@ void tftDispSPI::set_attribute( int n )
 			break;
 		case 8:
 		case 16:
-			mTextColor = TFT_EDISP_TRANSPARENT;
-			mTextBgColor = TFT_EDISP_TRANSPARENT;
+			mTextColor = TFT_EDISP_TRANSPARENT | (TFT_EDISP_TRANSPARENT << 4);
 			break;
 		case 30:
-			mTextColor = 1;//TFT_BLACK;
+      mTextColor &= 0xf0;
+			mTextColor |= 1;//TFT_BLACK;
 			break;
 		case 17:
 		case 31:
-			mTextColor = 3;//TFT_RED;
+      mTextColor &= 0xf0;
+			mTextColor |= 3;//TFT_RED;
 			break;
 		case 18:
 		case 32:
-			mTextColor = 6;//TFT_GREEN;
+      mTextColor &= 0xf0;
+			mTextColor |= 6;//TFT_GREEN;
 			break;
 		case 19:
 		case 33:
-			mTextColor = 5;//TFT_YELLOW;
+      mTextColor &= 0xf0;
+			mTextColor |= 5;//TFT_YELLOW;
 			break;
 		case 20:
 		case 34:
-			mTextColor = 7;//TFT_BLUE;
+      mTextColor &= 0xf0;
+			mTextColor |= 7;//TFT_BLUE;
 			break;
 		case 21:
 		case 35:
-			mTextColor = 12;//TFT_MAGENTA;
+      mTextColor &= 0xf0;
+			mTextColor |= 12;//TFT_MAGENTA;
 			break;
 		case 22:
 		case 36:
-			mTextColor = 11;//TFT_CYAN;
+      mTextColor &= 0xf0;
+			mTextColor |= 11;//TFT_CYAN;
 			break;
 		case 23:
 		case 37:
 		case 39:
-			mTextColor = 10;//TFT_WHITE;
+      mTextColor &= 0xf0;
+			mTextColor |= 10;//TFT_WHITE;
 			break;
 			
 		case 40:
-			mTextBgColor = 1;//TFT_BLACK;
+      mTextColor &= 0x0f;
+			mTextColor &= 1 << 4;//TFT_BLACK;
 			break;
 		case 41:
-			mTextBgColor = 3;//TFT_RED;
+      mTextColor &= 0x0f;
+			mTextColor |= 3 << 4;//TFT_RED;
 			break;
 		case 42:
-			mTextBgColor = 6;//TFT_GREEN;
+      mTextColor &= 0x0f;
+			mTextColor |= 6 << 4;//TFT_GREEN;
 			break;
 		case 43:
-			mTextBgColor = 5;//TFT_YELLOW;
+      mTextColor &= 0x0f;
+			mTextColor |= 5 << 4;//TFT_YELLOW;
 			break;
 		case 44:
-			mTextBgColor = 7;//TFT_BLUE;
+      mTextColor &= 0x0f;
+			mTextColor |= 7 << 4;//TFT_BLUE;
 			break;
 		case 45:
-			mTextBgColor = 12;//TFT_MAGENTA;
+      mTextColor &= 0x0f;
+			mTextColor |= 12 << 4;//TFT_MAGENTA;
 			break;
 		case 46:
-			mTextBgColor = 11;//TFT_CYAN;
+      mTextColor &= 0x0f;
+			mTextColor |= 11 << 4;//TFT_CYAN;
 			break;
 		case 47:
-			mTextBgColor = 10;//TFT_WHITE;
+      mTextColor &= 0x0f;
+			mTextColor = 10 << 4;//TFT_WHITE;
 			break;
 		case 49:
-			mTextBgColor = TFT_EDISP_TRANSPARENT;
+      mTextColor &= 0x0f;
+			mTextColor |= TFT_EDISP_TRANSPARENT << 4;
 			break;
 		case 24:
 			mFontStyle &= ~STYLE_UNDERLINED;
@@ -492,10 +497,12 @@ void tftDispSPI::set_attribute( int n )
 			mFontStyle &= ~STYLE_BOLD;
 			break;
 		case 60:
-			mTextColor = TFT_EDISP_TRANSPARENT;
+      mTextColor &= 0xf0;
+			mTextColor |= TFT_EDISP_TRANSPARENT;
 			break;
 		case 61:
-			mTextBgColor = TFT_EDISP_TRANSPARENT;
+      mTextColor &= 0x0f;
+			mTextColor = TFT_EDISP_TRANSPARENT << 4;
 			break;
 	}
 }
