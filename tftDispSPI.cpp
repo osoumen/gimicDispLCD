@@ -172,13 +172,10 @@ int tftDispSPI::sjisToLiner(int sjis)
 bool tftDispSPI::updateContent()
 {
 	if (mUpdateStartY < mUpdateEndY) {
-  #ifndef DO_PUSHIMAGE_IN_ANOTHERCORE
+#ifndef DO_PUSHIMAGE_IN_ANOTHERCORE
     if (mTft.dmaBusy()) return false;
-  #endif
-    const int fontHeight = sFontHeight[mFontType];
+#endif
     const int textHeight = sTextHeight[mFontType];
-    const int textWidth = sTextWidth[mFontType];
-    const int rowChars = sRowChars[mFontType];
     const int updateStartRow = mUpdateStartY / textHeight;
     const int updateEndRow = (mUpdateEndY + textHeight - 1) / textHeight;
     for (int i=updateStartRow; i<updateEndRow; ++i) {
@@ -188,66 +185,10 @@ bool tftDispSPI::updateContent()
       // 背景のコピー
       mTmpSpr[mWriteTmpSpr].pushImage(0, 0, VIEW_WIDTH, textHeight, mBgSprPtr+VIEW_WIDTH*i*textHeight);
       // 文字の描画
-      char glyphFirstByte;
-      bool reading2ByteCode = false;
-      const char *lineText = &mScreenChars[rowChars * i * 3]; 
-      for (int drawPos=0; drawPos<rowChars; ++drawPos) {
-        const uint8_t fontColor = *(lineText++);
-        const uint8_t fontStyle = *(lineText++);
-        const char  glyph = *(lineText++);
-        if (reading2ByteCode) {
-          int twoByteGlyph = sjisToLiner((glyphFirstByte << 8) | glyph);
-          uint16_t fg_color = edisp_4bit_palette[fontColor & 0x0f];
-          uint16_t bg_color = edisp_4bit_palette[fontColor >> 4];
-          drawGlyphTo16bppBuffer(m2ByteGlyphData+m2ByteGlyphBytes*twoByteGlyph, mTmpSprPtr[mWriteTmpSpr], (drawPos-1)*textWidth, textWidth*2,fontHeight,fg_color,bg_color);
-          reading2ByteCode = false;
-        }
-        else {
-          if (glyph != 0) {
-            if ((0x81 <= glyph && glyph <= 0x9f) || (0xe0 <= glyph && glyph <= 0xef)) {
-              glyphFirstByte = glyph;
-              reading2ByteCode = true;
-            }
-            else {
-              uint16_t fg_color = edisp_4bit_palette[fontColor & 0x0f];
-              uint16_t bg_color = edisp_4bit_palette[fontColor >> 4];
-              if (glyph == ' ') {
-                if (bg_color != TFT_TRANSPARENT) {
-                  mTmpSpr[mWriteTmpSpr].fillRect(drawPos*textWidth,0, textWidth,fontHeight, bg_color);
-                }
-              }
-              else {
-                drawGlyphTo16bppBuffer(mAsciiGlyphData+mAsciiGlyphBytes*glyph, mTmpSprPtr[mWriteTmpSpr], drawPos*textWidth, textWidth,fontHeight,fg_color,bg_color);
-              }
-            }
-          }
-        }
-        if (fontStyle & STYLE_UNDERLINED) {
-          uint16_t fg_color = edisp_4bit_palette[fontColor & 0x0f];
-          if (fg_color != TFT_TRANSPARENT) {
-            mTmpSpr[mWriteTmpSpr].drawFastHLine(drawPos * textWidth, textHeight-1, textWidth, fg_color);
-          }
-        }
-        else if (fontHeight == 11) {
-          // 中フォントのサイズは11pxなので12段目を背景色で描画する
-          uint16_t bg_color = edisp_4bit_palette[fontColor >> 4];
-          if (bg_color != TFT_TRANSPARENT) {
-            mTmpSpr[mWriteTmpSpr].drawFastHLine(drawPos * textWidth, textHeight-1, textWidth, bg_color);
-          }
-        }
-      }
-
+      update1LineText16bppBuffer(mTmpSprPtr[mWriteTmpSpr], i);
 #if defined(ENABLE_CURSOR_POINTER)
-      int tmpSprSt = i*textHeight;
-      int tmpSprEd = (i+1)*textHeight;
-      int pointerEdge1 = mPointerY - POINTER_NEGY_SIZE;
-      int pointerEdge2 = mPointerY + POINTER_POSY_SIZE;
-      if ((tmpSprSt <= pointerEdge1 && pointerEdge1 < pointerEdge1) || (tmpSprSt <= pointerEdge2 && pointerEdge1 < pointerEdge2)) {
-        mCursSpr.pushToSprite(&mTmpSpr[mWriteTmpSpr], mPointerX, mPointerY - tmpSprSt, TFT_WHITE);
-      }
+      redrawCursorPointerToSpr(&mTmpSpr[mWriteTmpSpr], i);
 #endif
-
-      
 #ifdef DO_PUSHIMAGE_IN_ANOTHERCORE
       mTmpSprYPos[mWriteTmpSpr] = i*textHeight;
       sem_release(&xSemLcdPushWait);
@@ -258,11 +199,78 @@ bool tftDispSPI::updateContent()
 #endif
       mWriteTmpSpr ^= 1;
     }
-
     mUpdateStartY = VIEW_HEIGHT;
     mUpdateEndY = 0;
 	}
   return true;
+}
+
+void tftDispSPI::redrawCursorPointerToSpr(TFT_eSprite *spr, int line)
+{
+  const int textHeight = sTextHeight[mFontType];
+  int tmpSprSt = line*textHeight;
+  int tmpSprEd = (line+1)*textHeight;
+  int pointerEdge1 = mPointerY - POINTER_NEGY_SIZE;
+  int pointerEdge2 = mPointerY + POINTER_POSY_SIZE;
+  if ((tmpSprSt <= pointerEdge1 && pointerEdge1 < pointerEdge1) || (tmpSprSt <= pointerEdge2 && pointerEdge1 < pointerEdge2)) {
+    mCursSpr.pushToSprite(spr, mPointerX, mPointerY - tmpSprSt, TFT_WHITE);
+  }
+}
+
+void tftDispSPI::update1LineText16bppBuffer(uint16_t *buffer, int line)
+{
+  const int fontHeight = sFontHeight[mFontType];
+  const int textHeight = sTextHeight[mFontType];
+  const int textWidth = sTextWidth[mFontType];
+  const int rowChars = sRowChars[mFontType];
+  char glyphFirstByte;
+  bool reading2ByteCode = false;
+  const char *lineText = &mScreenChars[rowChars * line * 3]; 
+  for (int drawPos=0; drawPos<rowChars; ++drawPos) {
+    const uint8_t fontColor = *(lineText++);
+    const uint8_t fontStyle = *(lineText++);
+    const char  glyph = *(lineText++);
+    if (reading2ByteCode) {
+      int twoByteGlyph = sjisToLiner((glyphFirstByte << 8) | glyph);
+      uint16_t fg_color = edisp_4bit_palette[fontColor & 0x0f];
+      uint16_t bg_color = edisp_4bit_palette[fontColor >> 4];
+      drawGlyphTo16bppBuffer(m2ByteGlyphData+m2ByteGlyphBytes*twoByteGlyph, buffer, (drawPos-1)*textWidth, textWidth*2,fontHeight,fg_color,bg_color);
+      reading2ByteCode = false;
+    }
+    else {
+      if (glyph != 0) {
+        if ((0x81 <= glyph && glyph <= 0x9f) || (0xe0 <= glyph && glyph <= 0xef)) {
+          glyphFirstByte = glyph;
+          reading2ByteCode = true;
+        }
+        else {
+          uint16_t fg_color = edisp_4bit_palette[fontColor & 0x0f];
+          uint16_t bg_color = edisp_4bit_palette[fontColor >> 4];
+          if (glyph == ' ') {
+            if (bg_color != TFT_TRANSPARENT) {
+              mTmpSpr[mWriteTmpSpr].fillRect(drawPos*textWidth,0, textWidth,fontHeight, bg_color);
+            }
+          }
+          else {
+            drawGlyphTo16bppBuffer(mAsciiGlyphData+mAsciiGlyphBytes*glyph, buffer, drawPos*textWidth, textWidth,fontHeight,fg_color,bg_color);
+          }
+        }
+      }
+    }
+    if (fontStyle & STYLE_UNDERLINED) {
+      uint16_t fg_color = edisp_4bit_palette[fontColor & 0x0f];
+      if (fg_color != TFT_TRANSPARENT) {
+        mTmpSpr[mWriteTmpSpr].drawFastHLine(drawPos * textWidth, textHeight-1, textWidth, fg_color);
+      }
+    }
+    else if (fontHeight == 11) {
+      // 中フォントのサイズは11pxなので12段目を背景色で描画する
+      uint16_t bg_color = edisp_4bit_palette[fontColor >> 4];
+      if (bg_color != TFT_TRANSPARENT) {
+        mTmpSpr[mWriteTmpSpr].drawFastHLine(drawPos * textWidth, textHeight-1, textWidth, bg_color);
+      }
+    }
+  }
 }
 
 void tftDispSPI::lcdPushProc()
@@ -327,9 +335,7 @@ int tftDispSPI::getLineLength(const char *str)
 void tftDispSPI::puts_(const char* str, uint32_t max_len)
 {
   char back_foreColor = (mFontStyle & STYLE_INVERTED) ? ((mTextColor << 4) | (mTextColor >> 4)) : mTextColor;
-  
   int startCol = 0;
-
   int textHeight = sTextHeight[mFontType];
   int rowChars = sRowChars[mFontType];
   int endLine = VIEW_HEIGHT / sTextHeight[mFontType];
@@ -337,12 +343,11 @@ void tftDispSPI::puts_(const char* str, uint32_t max_len)
   do {
     const char *lineText = &str[startCol];
     int lineLen = getLineLength(lineText);
-    int lineStartPosX = mTextPosX;
     int lineStartY = mTextPosY * textHeight;
     int lineEndY = (mTextPosY + 1) * textHeight;
     int numUpdatesPerLine = 0;
 
-    // テキストを1文字ずつ描画
+    // すでにある文字と同じか画面外の場合は更新しない
     int drawPos = 0;
     int screenCharInd = (rowChars * mTextPosY + mTextPosX) * 3;
     while (drawPos < lineLen) {

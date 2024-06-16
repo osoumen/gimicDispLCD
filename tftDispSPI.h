@@ -303,6 +303,8 @@ private:
 	static int	getLineLength(const char *str);
 	void			  setUpdateArea(int startY, int endY);
   uint16_t    conv555To565(int col) { return ((col << 1) & 0xffc0) | (col & 0x1f); }
+  void        redrawCursorPointerToSpr(TFT_eSprite *spr, int line);
+  void        update1LineText16bppBuffer(uint16_t *buffer, int line);
   void        drawGlyphTo16bppBuffer(const uint8_t *glyphSt, uint16_t *dst, uint16_t xpos, uint16_t fontWidth, uint16_t fontHeight, uint16_t foreColor, uint16_t backColor);
 };
 
