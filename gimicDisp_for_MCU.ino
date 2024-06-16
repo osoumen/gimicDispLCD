@@ -85,15 +85,6 @@ void setup() {
   Wire1.onReceive(recv);
   Wire1.onRequest(req);
   
-#ifdef LED_BUILTIN
-  pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, LOW);
-#endif
-#ifdef ENABLE_MULTI_CORE
-}
-
-void setup1() {
-#endif
   pinMode(BUTTON1_PIN_NO, INPUT_PULLUP);
   gpio_set_input_hysteresis_enabled (BUTTON1_PIN_NO, true);
   pinMode(BUTTON2_PIN_NO, INPUT_PULLUP);
@@ -109,6 +100,16 @@ void setup1() {
   attachInterrupt(digitalPinToInterrupt(BUTTON3_PIN_NO), buttonChange3, CHANGE);
   attachInterrupt(digitalPinToInterrupt(BUTTON4_PIN_NO), buttonChange4, CHANGE);
   attachInterrupt(digitalPinToInterrupt(BUTTON5_PIN_NO), buttonChange5, CHANGE);
+
+#ifdef LED_BUILTIN
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, LOW);
+#endif
+#ifdef ENABLE_MULTI_CORE
+}
+
+void setup1() {
+#endif
 
 #ifdef ENABLE_SERIAL_OUT
   Serial.begin(115200);
