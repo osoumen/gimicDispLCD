@@ -268,6 +268,8 @@ private:
 	static const int	STYLE_BLINKED = 0x04;
 	static const int	STYLE_INVERTED = 0x08;
   static const int  TFT_EDISP_TRANSPARENT = 0;
+  static const int  POINTER_POSX_SIZE = 8;
+  static const int  POINTER_NEGX_SIZE = 0;
   static const int  POINTER_POSY_SIZE = 12;
   static const int  POINTER_NEGY_SIZE = 0;
 
@@ -282,6 +284,8 @@ private:
   int           mWriteTmpSpr;
   int           mReadTmpSpr;
   int           mFontType;
+  int           mUpdateStartX;
+  int           mUpdateEndX;
   int           mUpdateStartY;
   int           mUpdateEndY;
   int     		  mTextPosX;
@@ -301,11 +305,11 @@ private:
 
   static int  sjisToLiner(int sjis);
 	static int	getLineLength(const char *str);
-	void			  setUpdateArea(int startY, int endY);
+	void			  setUpdateArea(int startX, int endX, int startY, int endY);
   uint16_t    conv555To565(int col) { return ((col << 1) & 0xffc0) | (col & 0x1f); }
-  void        redrawCursorPointerToSpr(TFT_eSprite *spr, int line);
-  void        update1LineText16bppBuffer(uint16_t *buffer, int line);
-  void        drawGlyphTo16bppBuffer(const uint8_t *glyphSt, uint16_t *dst, uint16_t xpos, uint16_t fontWidth, uint16_t fontHeight, uint16_t foreColor, uint16_t backColor);
+  void        redrawCursorPointerToSpr(int updateX1, int updateX2, TFT_eSprite *spr, int line);
+  void        update1LineText16bppBuffer(int startCol, int endCol, TFT_eSprite *spr, uint16_t *buffer, int line);
+  void        drawGlyphTo16bppBuffer(const uint8_t *glyphSt, uint16_t *dst, uint16_t dstWidth, uint16_t xpos, uint16_t fontWidth, uint16_t fontHeight, uint16_t foreColor, uint16_t backColor);
 };
 
 #endif // tftDispSPI_h

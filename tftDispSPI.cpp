@@ -69,6 +69,8 @@ tftDispSPI::tftDispSPI()
 , mCursSprPtr(nullptr)
 , mWriteTmpSpr(0)
 , mReadTmpSpr(0)
+, mUpdateStartX(VIEW_WIDTH)
+, mUpdateEndX(0)
 , mUpdateStartY(VIEW_HEIGHT)
 , mUpdateEndY(0)
 , mTextPosX(0)
@@ -171,61 +173,78 @@ int tftDispSPI::sjisToLiner(int sjis)
 
 bool tftDispSPI::updateContent()
 {
-	if (mUpdateStartY < mUpdateEndY) {
+	if (mUpdateStartY < mUpdateEndY && mUpdateStartX < mUpdateEndX) {
 #ifndef DO_PUSHIMAGE_IN_ANOTHERCORE
     if (mTft.dmaBusy()) return false;
 #endif
     const int textHeight = sTextHeight[mFontType];
+    const int textWidth = sTextWidth[mFontType];
+    const int updateStartCol = mUpdateStartX / textWidth;
+    const int updateEndCol = (mUpdateEndX + textWidth - 1) / textWidth;
+    const int updateRectWidth = (updateEndCol - updateStartCol) * textWidth;
     const int updateStartRow = mUpdateStartY / textHeight;
     const int updateEndRow = (mUpdateEndY + textHeight - 1) / textHeight;
     for (int i=updateStartRow; i<updateEndRow; ++i) {
 #ifdef DO_PUSHIMAGE_IN_ANOTHERCORE
       sem_acquire_blocking(&xSemLcdPushMutex);
 #endif
+      TFT_eSprite *tmpSpr = &mTmpSpr[mWriteTmpSpr];
+      uint16_t*   tmpSprPtr;
+      tmpSpr->setColorDepth(16);
+      tmpSprPtr = (uint16_t*)tmpSpr->createSprite(updateRectWidth, textHeight);
       // 背景のコピー
-      mTmpSpr[mWriteTmpSpr].pushImage(0, 0, VIEW_WIDTH, textHeight, mBgSprPtr+VIEW_WIDTH*i*textHeight);
+      mBgSpr.pushToSprite(tmpSpr, -updateStartCol * textWidth, -i * textHeight);
       // 文字の描画
-      update1LineText16bppBuffer(mTmpSprPtr[mWriteTmpSpr], i);
+      update1LineText16bppBuffer(updateStartCol, updateEndCol, tmpSpr, tmpSprPtr, i);
 #if defined(ENABLE_CURSOR_POINTER)
-      redrawCursorPointerToSpr(&mTmpSpr[mWriteTmpSpr], i);
+      redrawCursorPointerToSpr(updateStartCol * textWidth, updateEndCol * textWidth, tmpSpr, i);
 #endif
 #ifdef DO_PUSHIMAGE_IN_ANOTHERCORE
       mTmpSprYPos[mWriteTmpSpr] = i*textHeight;
       sem_release(&xSemLcdPushWait);
 #else
       mTft.startWrite();
-      mTft.pushImageDMA(0, i*textHeight, VIEW_WIDTH, textHeight, mTmpSprPtr[mWriteTmpSpr]);
+      mTft.pushImageDMA(updateStartCol * textWidth, i*textHeight, updateRectWidth, textHeight, tmpSprPtr);
       mTft.endWrite();
 #endif
+      tmpSpr->deleteSprite();
+
       mWriteTmpSpr ^= 1;
     }
+    mUpdateStartX = VIEW_WIDTH;
+    mUpdateEndX = 0;
     mUpdateStartY = VIEW_HEIGHT;
     mUpdateEndY = 0;
 	}
   return true;
 }
 
-void tftDispSPI::redrawCursorPointerToSpr(TFT_eSprite *spr, int line)
+void tftDispSPI::redrawCursorPointerToSpr(int updateX1, int updateX2, TFT_eSprite *spr, int line)
 {
   const int textHeight = sTextHeight[mFontType];
   int tmpSprSt = line*textHeight;
   int tmpSprEd = (line+1)*textHeight;
-  int pointerEdge1 = mPointerY - POINTER_NEGY_SIZE;
-  int pointerEdge2 = mPointerY + POINTER_POSY_SIZE;
-  if ((tmpSprSt <= pointerEdge1 && pointerEdge1 < pointerEdge1) || (tmpSprSt <= pointerEdge2 && pointerEdge1 < pointerEdge2)) {
-    mCursSpr.pushToSprite(spr, mPointerX, mPointerY - tmpSprSt, TFT_WHITE);
+  int pointerEdgeX1 = mPointerX - POINTER_NEGX_SIZE;
+  int pointerEdgeX2 = mPointerX + POINTER_POSX_SIZE;
+  int pointerEdgeY1 = mPointerY - POINTER_NEGY_SIZE;
+  int pointerEdgeY2 = mPointerY + POINTER_POSY_SIZE;
+  if (
+    (tmpSprSt <= pointerEdgeY1 && pointerEdgeY1 < tmpSprEd) || (tmpSprSt <= pointerEdgeY2 && pointerEdgeY2 < tmpSprEd) ||
+    (updateX1 <= pointerEdgeX1 && pointerEdgeX1 < updateX2) || (updateX1 <= pointerEdgeX2 && pointerEdgeX2 < updateX2)
+    ) {
+    mCursSpr.pushToSprite(spr, mPointerX - updateX1, mPointerY - tmpSprSt, TFT_WHITE);
   }
 }
 
-void tftDispSPI::update1LineText16bppBuffer(uint16_t *buffer, int line)
+void tftDispSPI::update1LineText16bppBuffer(int startCol, int endCol, TFT_eSprite *spr, uint16_t *buffer, int line)
 {
   const int fontHeight = sFontHeight[mFontType];
   const int textHeight = sTextHeight[mFontType];
   const int textWidth = sTextWidth[mFontType];
-  const int rowChars = sRowChars[mFontType];
+  const int rowChars = endCol - startCol;
   char glyphFirstByte;
   bool reading2ByteCode = false;
-  const char *lineText = &mScreenChars[rowChars * line * 3]; 
+  const char *lineText = &mScreenChars[(sRowChars[mFontType] * line + startCol) * 3]; 
   for (int drawPos=0; drawPos<rowChars; ++drawPos) {
     const uint8_t fontColor = *(lineText++);
     const uint8_t fontStyle = *(lineText++);
@@ -234,7 +253,7 @@ void tftDispSPI::update1LineText16bppBuffer(uint16_t *buffer, int line)
       int twoByteGlyph = sjisToLiner((glyphFirstByte << 8) | glyph);
       uint16_t fg_color = edisp_4bit_palette[fontColor & 0x0f];
       uint16_t bg_color = edisp_4bit_palette[fontColor >> 4];
-      drawGlyphTo16bppBuffer(m2ByteGlyphData+m2ByteGlyphBytes*twoByteGlyph, buffer, (drawPos-1)*textWidth, textWidth*2,fontHeight,fg_color,bg_color);
+      drawGlyphTo16bppBuffer(m2ByteGlyphData+m2ByteGlyphBytes*twoByteGlyph, buffer, rowChars * textWidth, (drawPos-1)*textWidth, textWidth*2,fontHeight,fg_color,bg_color);
       reading2ByteCode = false;
     }
     else {
@@ -248,11 +267,11 @@ void tftDispSPI::update1LineText16bppBuffer(uint16_t *buffer, int line)
           uint16_t bg_color = edisp_4bit_palette[fontColor >> 4];
           if (glyph == ' ') {
             if (bg_color != TFT_TRANSPARENT) {
-              mTmpSpr[mWriteTmpSpr].fillRect(drawPos*textWidth,0, textWidth,fontHeight, bg_color);
+              spr->fillRect(drawPos*textWidth,0, textWidth,fontHeight, bg_color);
             }
           }
           else {
-            drawGlyphTo16bppBuffer(mAsciiGlyphData+mAsciiGlyphBytes*glyph, buffer, drawPos*textWidth, textWidth,fontHeight,fg_color,bg_color);
+            drawGlyphTo16bppBuffer(mAsciiGlyphData+mAsciiGlyphBytes*glyph, buffer, rowChars * textWidth, drawPos*textWidth, textWidth,fontHeight,fg_color,bg_color);
           }
         }
       }
@@ -260,17 +279,17 @@ void tftDispSPI::update1LineText16bppBuffer(uint16_t *buffer, int line)
     if (fontStyle & STYLE_UNDERLINED) {
       uint16_t fg_color = edisp_4bit_palette[fontColor & 0x0f];
       if (fg_color != TFT_TRANSPARENT) {
-        mTmpSpr[mWriteTmpSpr].drawFastHLine(drawPos * textWidth, textHeight-1, textWidth, fg_color);
+        spr->drawFastHLine(drawPos * textWidth, textHeight-1, textWidth, fg_color);
       }
       else {
-        mTmpSpr[mWriteTmpSpr].pushImage(0, textHeight-1, VIEW_WIDTH, 1, mBgSprPtr+VIEW_WIDTH*((line+1)*textHeight-1));
+        spr->pushImage(0, textHeight-1, textWidth, 1, mBgSprPtr+spr->width()*((line+1)*textHeight-1));
       }
     }
     else if (fontHeight == 11) {
       // 中フォントのサイズは11pxなので12段目を背景色で描画する
       uint16_t bg_color = edisp_4bit_palette[fontColor >> 4];
       if (bg_color != TFT_TRANSPARENT) {
-        mTmpSpr[mWriteTmpSpr].drawFastHLine(drawPos * textWidth, textHeight-1, textWidth, bg_color);
+        spr->drawFastHLine(drawPos * textWidth, textHeight-1, textWidth, bg_color);
       }
     }
   }
@@ -290,7 +309,7 @@ void tftDispSPI::lcdPushProc()
 #endif
 }
 
-void  tftDispSPI::drawGlyphTo16bppBuffer(const uint8_t *glyphSt, uint16_t *dst, uint16_t xpos, uint16_t fontWidth, uint16_t fontHeight, uint16_t foreColor, uint16_t backColor)
+void  tftDispSPI::drawGlyphTo16bppBuffer(const uint8_t *glyphSt, uint16_t *dst, uint16_t dstWidth, uint16_t xpos, uint16_t fontWidth, uint16_t fontHeight, uint16_t foreColor, uint16_t backColor)
 {
   const uint8_t *readPtr = glyphSt;
   dst += xpos;
@@ -312,17 +331,23 @@ void  tftDispSPI::drawGlyphTo16bppBuffer(const uint8_t *glyphSt, uint16_t *dst, 
       inByte >>= 1;
       shift = (shift + 1) & 0x07;
     }
-    dst += VIEW_WIDTH;
+    dst += dstWidth;
   }
 }
 
-void	tftDispSPI::setUpdateArea(int startY, int endY)
+void	tftDispSPI::setUpdateArea(int startX, int endX, int startY, int endY)
 {
+  if (startX < mUpdateStartX) {
+    mUpdateStartX = max(0,startX);
+  }
+  if (endX > mUpdateEndX) {
+    mUpdateEndX = min(VIEW_WIDTH,endX);
+  }
   if (startY < mUpdateStartY) {
-    mUpdateStartY = startY;
+    mUpdateStartY = max(0,startY);
   }
   if (endY > mUpdateEndY) {
-    mUpdateEndY = endY;
+    mUpdateEndY = min(VIEW_HEIGHT,endY);
   }
 }
 
@@ -340,12 +365,14 @@ void tftDispSPI::puts_(const char* str, uint32_t max_len)
   char back_foreColor = (mFontStyle & STYLE_INVERTED) ? ((mTextColor << 4) | (mTextColor >> 4)) : mTextColor;
   int startCol = 0;
   int textHeight = sTextHeight[mFontType];
+  int textWidth = sTextWidth[mFontType];
   int rowChars = sRowChars[mFontType];
   int endLine = VIEW_HEIGHT / sTextHeight[mFontType];
 
   do {
     const char *lineText = &str[startCol];
     int lineLen = getLineLength(lineText);
+    int lineStartX = mTextPosX * textWidth;
     int lineStartY = mTextPosY * textHeight;
     int lineEndY = (mTextPosY + 1) * textHeight;
     int numUpdatesPerLine = 0;
@@ -368,7 +395,7 @@ void tftDispSPI::puts_(const char* str, uint32_t max_len)
       ++drawPos;
     }
     if (numUpdatesPerLine > 0) {
-      setUpdateArea(lineStartY, lineEndY);
+      setUpdateArea(lineStartX, mTextPosX * textWidth, lineStartY, lineEndY);
     }
     // 改行コードがあれば次の行に進む処理
     startCol += lineLen;
@@ -406,7 +433,7 @@ void tftDispSPI::clear(void)
 	mTextPosX = mTextPosY = 0;
   mBgSpr.fillSprite(TFT_BLACK);
   memset(mScreenChars, 0, (3 * VIEW_WIDTH * VIEW_HEIGHT) / (sTextHeight[mFontType] * sTextWidth[mFontType]));
-  setUpdateArea(0, VIEW_HEIGHT);
+  setUpdateArea(0, VIEW_WIDTH, 0, VIEW_HEIGHT);
 }
 
 void tftDispSPI::move(int r, int c)
@@ -580,7 +607,7 @@ void tftDispSPI::del_to_end()
   int delEnd = delSt + (sRowChars[mFontType] - mTextPosX) * 3;
   if ((delSt < 0) || (delEnd >= sizeof(mScreenChars)) || (mTextPosX >= sRowChars[mFontType])) return;
   memset(&mScreenChars[delSt], 0, (sRowChars[mFontType] - mTextPosX) * 3);
-  setUpdateArea(textHeight * mTextPosY, textHeight * (mTextPosY + 1));
+  setUpdateArea(mTextPosX * textWidth, VIEW_WIDTH, textHeight * mTextPosY, textHeight * (mTextPosY + 1));
 }
 
 void tftDispSPI::del_row()
@@ -590,7 +617,7 @@ void tftDispSPI::del_row()
   int delEnd = delSt + sRowChars[mFontType] * 3;
   if ((delSt < 0) || (delEnd >= sizeof(mScreenChars))) return;
   memset(&mScreenChars[delSt], 0, sRowChars[mFontType] * 3);
-  setUpdateArea(textHeight * mTextPosY, textHeight * (mTextPosY + 1));
+  setUpdateArea(0, VIEW_WIDTH, textHeight * mTextPosY, textHeight * (mTextPosY + 1));
 }
 
 void tftDispSPI::del(int n)
@@ -601,7 +628,7 @@ void tftDispSPI::del(int n)
   int delEnd = delSt + n * 3;
   if ((delSt < 0) || (delEnd >= sizeof(mScreenChars))) return;
   memset(&mScreenChars[delSt], 0, n * 3);
-  setUpdateArea(textHeight * mTextPosY, textHeight * (mTextPosY + 1));
+  setUpdateArea(mTextPosX * textWidth, min(VIEW_WIDTH, (mTextPosX + n) * textWidth), textHeight * mTextPosY, textHeight * (mTextPosY + 1));
 }
 
 void tftDispSPI::save_attribute(int n)
@@ -637,14 +664,14 @@ void tftDispSPI::set_charsize(int x)
     int textHeight = sTextHeight[x];
     int textLines = VIEW_HEIGHT / textHeight;
     mFontType = x;
-    for (int i=0; i<2; ++i) {
-      if (mTmpSprPtr[i] != nullptr) {
-        mTmpSpr[i].deleteSprite();
-        mTmpSprPtr[i] = nullptr;
-      }
-      mTmpSpr[i].setColorDepth(16);
-      mTmpSprPtr[i] = (uint16_t*)mTmpSpr[i].createSprite(VIEW_WIDTH, textHeight);
-    }
+    // for (int i=0; i<2; ++i) {
+    //   if (mTmpSprPtr[i] != nullptr) {
+    //     mTmpSpr[i].deleteSprite();
+    //     mTmpSprPtr[i] = nullptr;
+    //   }
+    //   mTmpSpr[i].setColorDepth(16);
+    //   mTmpSprPtr[i] = (uint16_t*)mTmpSpr[i].createSprite(VIEW_WIDTH, textHeight);
+    // }
     memset(mScreenChars, 0, (3 * VIEW_WIDTH*VIEW_HEIGHT) / (sTextHeight[mFontType] * sTextWidth[mFontType]));
 
     switch(x) {
@@ -693,23 +720,25 @@ void tftDispSPI::set_bgbuff(int x)
 void tftDispSPI::clear_bgbuff(int x)
 {
 	mBgSpr.fillSprite(TFT_BLACK);
+  mUpdateStartX = 0;
+  mUpdateEndX = VIEW_WIDTH;
   mUpdateStartY = 0;
   mUpdateEndY = VIEW_HEIGHT;
-  setUpdateArea(0, VIEW_HEIGHT);
+  setUpdateArea(0, VIEW_WIDTH, 0, VIEW_HEIGHT);
 }
 
 void tftDispSPI::draw_fillrect(int bg, int w, int h, int x, int y, int col )
 {
   uint16_t tft_col = conv555To565(col);
   mBgSpr.fillRect(x, y, w, h, tft_col);
-  setUpdateArea(y, y+h);
+  setUpdateArea(x, x+w, y, y+h);
 }
 
 void tftDispSPI::draw_line(int bg, int x0, int y0, int x1, int y1, int col )
 {
   uint16_t tft_col = conv555To565(col);
   mBgSpr.drawLine(x0, y0, x1, y1, tft_col);
-  setUpdateArea(y0, y1);
+  setUpdateArea(x0, x1, y0, y1);
 }
 
 void tftDispSPI::draw_ellipse(int bg, int fill, int cx, int cy, int xw, int yh, int col )
@@ -721,14 +750,14 @@ void tftDispSPI::draw_ellipse(int bg, int fill, int cx, int cy, int xw, int yh, 
   else {
     mBgSpr.drawEllipse(cx, cy, xw, yh, tft_col);
   }
-  setUpdateArea(max(0, cy - yh), min(VIEW_HEIGHT, cy + yh + 1));
+  setUpdateArea(cx - xw, cx + xw + 1, cy - yh, cy + yh + 1);
 }
 
 void tftDispSPI::draw_rectangle(int bg, int w, int h, int x, int y, int col)
 {
   uint16_t tft_col = conv555To565(col);
   mBgSpr.drawRect(x, y, w, h, tft_col);
-  setUpdateArea(y, y+h);
+  setUpdateArea(x, x+w, y, y+h);
 }
 
 void tftDispSPI::draw_image(int file, int bg, int x, int y)
@@ -737,7 +766,7 @@ void tftDispSPI::draw_image(int file, int bg, int x, int y)
   const uint16_t  *imagePtr = imgArray[file];
   if (imagePtr != nullptr) {
     mBgSpr.pushImage(x, y, imagePtr[0], imagePtr[1], &imagePtr[2]);
-    setUpdateArea(y, y+imagePtr[1]);
+    setUpdateArea(x, x+imagePtr[0], y, y+imagePtr[1]);
   }
 }
 
@@ -749,18 +778,18 @@ void tftDispSPI::draw_image2(int file, int bg, int fol, int x, int y)
 void  tftDispSPI::setCursorPointer(int16_t x, int16_t y)
 {
 #if defined(ENABLE_CURSOR_POINTER)
-  setUpdateArea(mPointerY - POINTER_NEGY_SIZE, mPointerY + POINTER_POSY_SIZE);
+  setUpdateArea(mPointerX - POINTER_NEGX_SIZE, mPointerX + POINTER_POSX_SIZE, mPointerY - POINTER_NEGY_SIZE, mPointerY + POINTER_POSY_SIZE);
   mPointerX = x;
   mPointerY = y;
-  setUpdateArea(mPointerY - POINTER_NEGY_SIZE, mPointerY + POINTER_POSY_SIZE);
+  setUpdateArea(mPointerX - POINTER_NEGX_SIZE, mPointerX + POINTER_POSX_SIZE, mPointerY - POINTER_NEGY_SIZE, mPointerY + POINTER_POSY_SIZE);
 #endif
 }
 
 void  tftDispSPI::hideCursorPointer()
 {
 #if defined(ENABLE_CURSOR_POINTER)
-  setUpdateArea(mPointerY - POINTER_NEGY_SIZE, mPointerY + POINTER_POSY_SIZE);
-  mPointerX = -POINTER_POSY_SIZE;
+  setUpdateArea(mPointerX - POINTER_NEGX_SIZE, mPointerX + POINTER_POSX_SIZE, mPointerY - POINTER_NEGY_SIZE, mPointerY + POINTER_POSY_SIZE);
+  mPointerX = -POINTER_POSX_SIZE;
   mPointerY = -POINTER_POSY_SIZE;
 #endif
 }
