@@ -282,7 +282,7 @@ void tftDispSPI::update1LineText16bppBuffer(int startCol, int endCol, TFT_eSprit
         spr->drawFastHLine(drawPos * textWidth, textHeight-1, textWidth, fg_color);
       }
       else {
-        spr->pushImage(0, textHeight-1, textWidth, 1, mBgSprPtr+spr->width()*((line+1)*textHeight-1));
+        spr->pushImage(drawPos * textWidth, textHeight-1, textWidth, 1, mBgSprPtr+spr->width()*((line+1)*textHeight-1)+drawPos * textWidth);
       }
     }
     else if (fontHeight == 11) {
