@@ -8,7 +8,7 @@
 #include "misaki_gothic.h"
 #include "image.h"
 
-#define ENABLE_CURSOR_POINTER 1
+// #define ENABLE_CURSOR_POINTER 1
 // #define DO_PUSHIMAGE_IN_ANOTHERCORE 1
 
 const uint16_t imgcurs[] PROGMEM = {
