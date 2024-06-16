@@ -520,7 +520,7 @@ void tftDispSPI::set_attribute( int n )
 			break;
 		case 47:
       mTextColor &= 0x0f;
-			mTextColor = 10 << 4;//TFT_WHITE;
+			mTextColor |= 10 << 4;//TFT_WHITE;
 			break;
 		case 49:
       mTextColor &= 0x0f;
@@ -544,7 +544,7 @@ void tftDispSPI::set_attribute( int n )
 			break;
 		case 61:
       mTextColor &= 0x0f;
-			mTextColor = TFT_EDISP_TRANSPARENT << 4;
+			mTextColor |= TFT_EDISP_TRANSPARENT << 4;
 			break;
 	}
 }
