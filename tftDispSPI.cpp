@@ -339,6 +339,7 @@ void  tftDispSPI::drawGlyphTo16bppBuffer(const uint8_t *glyphSt, uint16_t *dst, 
 
 void	tftDispSPI::setUpdateArea(int startX, int endX, int startY, int endY)
 {
+  if (startX == endX || startY == endY) return;
   if (startX < mUpdateStartX) {
     mUpdateStartX = max(0,startX);
   }
@@ -608,18 +609,53 @@ void tftDispSPI::del_to_end()
   int delSt = (sRowChars[mFontType] * mTextPosY + mTextPosX) * 3;
   int delEnd = delSt + (sRowChars[mFontType] - mTextPosX) * 3;
   if ((delSt < 0) || (delEnd >= sizeof(mScreenChars)) || (mTextPosX >= sRowChars[mFontType])) return;
+
+  int unchanged = 0;
+  int headUnchanged = 0;
+  int tailUnchanged = 0;
+  const char *ptr = &mScreenChars[delSt + 2];
+  for (int i=mTextPosX; i<sRowChars[mFontType]; ++i) {
+    if (*ptr == 0) {
+      unchanged++;
+    }
+    else {
+      if (unchanged > 0 && unchanged == (i-mTextPosX)) headUnchanged = unchanged;
+      unchanged = 0;
+    }
+    ptr += 3;
+  }
+  tailUnchanged = unchanged;
+
   memset(&mScreenChars[delSt], 0, (sRowChars[mFontType] - mTextPosX) * 3);
-  setUpdateArea(mTextPosX * textWidth, VIEW_WIDTH, textHeight * mTextPosY, textHeight * (mTextPosY + 1));
+  setUpdateArea((mTextPosX + headUnchanged) * textWidth, VIEW_WIDTH - tailUnchanged * textWidth, textHeight * mTextPosY, textHeight * (mTextPosY + 1));
 }
 
 void tftDispSPI::del_row()
 {
   int textHeight = sTextHeight[mFontType];
+  int textWidth = sTextWidth[mFontType];
   int delSt = (sRowChars[mFontType] * mTextPosY) * 3;
   int delEnd = delSt + sRowChars[mFontType] * 3;
   if ((delSt < 0) || (delEnd >= sizeof(mScreenChars))) return;
+
+  int unchanged = 0;
+  int headUnchanged = 0;
+  int tailUnchanged = 0;
+  const char *ptr = &mScreenChars[delSt + 2];
+  for (int i=0; i<sRowChars[mFontType]; ++i) {
+    if (*ptr == 0) {
+      unchanged++;
+    }
+    else {
+      if (unchanged > 0 && unchanged == i) headUnchanged = unchanged;
+      unchanged = 0;
+    }
+    ptr += 3;
+  }
+  tailUnchanged = unchanged;
+
   memset(&mScreenChars[delSt], 0, sRowChars[mFontType] * 3);
-  setUpdateArea(0, VIEW_WIDTH, textHeight * mTextPosY, textHeight * (mTextPosY + 1));
+  setUpdateArea(headUnchanged * textWidth, VIEW_WIDTH - tailUnchanged * textWidth, textHeight * mTextPosY, textHeight * (mTextPosY + 1));
 }
 
 void tftDispSPI::del(int n)
@@ -629,8 +665,25 @@ void tftDispSPI::del(int n)
   int delSt = (sRowChars[mFontType] * mTextPosY + mTextPosX) * 3;
   int delEnd = delSt + n * 3;
   if ((delSt < 0) || (delEnd >= sizeof(mScreenChars))) return;
+
+  int unchanged = 0;
+  int headUnchanged = 0;
+  int tailUnchanged = 0;
+  const char *ptr = &mScreenChars[delSt + 2];
+  for (int i=mTextPosX; i<(mTextPosX+n); ++i) {
+    if (*ptr == 0) {
+      unchanged++;
+    }
+    else {
+      if (unchanged > 0 && unchanged == (i-mTextPosX)) headUnchanged = unchanged;
+      unchanged = 0;
+    }
+    ptr += 3;
+  }
+  tailUnchanged = unchanged;
+
   memset(&mScreenChars[delSt], 0, n * 3);
-  setUpdateArea(mTextPosX * textWidth, min(VIEW_WIDTH, (mTextPosX + n) * textWidth), textHeight * mTextPosY, textHeight * (mTextPosY + 1));
+  setUpdateArea((mTextPosX + headUnchanged) * textWidth, (mTextPosX + n - tailUnchanged) * textWidth, textHeight * mTextPosY, textHeight * (mTextPosY + 1));
 }
 
 void tftDispSPI::save_attribute(int n)
