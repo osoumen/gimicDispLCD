@@ -195,7 +195,7 @@ bool tftDispSPI::updateContent()
       tmpSpr->setColorDepth(16);
       mTmpSprPtr[mWriteTmpSpr] = (uint16_t*)tmpSpr->createSprite(updateRectWidth, textHeight);
       // 背景のコピー
-      mBgSpr.pushToSprite(tmpSpr, -updateStartCol * textWidth, -i * textHeight);
+      tmpSpr->pushImage(-updateStartCol * textWidth, -i * textHeight, VIEW_WIDTH, VIEW_HEIGHT, mBgSprPtr);
       // 文字の描画
       update1LineText16bppBuffer(updateStartCol, updateEndCol, tmpSpr, mTmpSprPtr[mWriteTmpSpr], i);
 #if defined(ENABLE_CURSOR_POINTER)
