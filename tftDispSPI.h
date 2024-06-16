@@ -280,6 +280,7 @@ private:
   uint16_t*     mBgSprPtr;
   uint16_t*     mTmpSprPtr[2];
   uint16_t*     mCursSprPtr;
+  uint16_t      mTmpSprXPos[2];
   uint16_t      mTmpSprYPos[2];
   int           mWriteTmpSpr;
   int           mReadTmpSpr;

@@ -188,26 +188,28 @@ bool tftDispSPI::updateContent()
 #ifdef DO_PUSHIMAGE_IN_ANOTHERCORE
       sem_acquire_blocking(&xSemLcdPushMutex);
 #endif
+      if (mTmpSprPtr[mWriteTmpSpr] != nullptr) {
+        mTmpSpr[mWriteTmpSpr].deleteSprite();
+      }
       TFT_eSprite *tmpSpr = &mTmpSpr[mWriteTmpSpr];
-      uint16_t*   tmpSprPtr;
       tmpSpr->setColorDepth(16);
-      tmpSprPtr = (uint16_t*)tmpSpr->createSprite(updateRectWidth, textHeight);
+      mTmpSprPtr[mWriteTmpSpr] = (uint16_t*)tmpSpr->createSprite(updateRectWidth, textHeight);
       // 背景のコピー
       mBgSpr.pushToSprite(tmpSpr, -updateStartCol * textWidth, -i * textHeight);
       // 文字の描画
-      update1LineText16bppBuffer(updateStartCol, updateEndCol, tmpSpr, tmpSprPtr, i);
+      update1LineText16bppBuffer(updateStartCol, updateEndCol, tmpSpr, mTmpSprPtr[mWriteTmpSpr], i);
 #if defined(ENABLE_CURSOR_POINTER)
       redrawCursorPointerToSpr(updateStartCol * textWidth, updateEndCol * textWidth, tmpSpr, i);
 #endif
 #ifdef DO_PUSHIMAGE_IN_ANOTHERCORE
+      mTmpSprXPos[mWriteTmpSpr] = updateStartCol * textWidth;
       mTmpSprYPos[mWriteTmpSpr] = i*textHeight;
       sem_release(&xSemLcdPushWait);
 #else
       mTft.startWrite();
-      mTft.pushImageDMA(updateStartCol * textWidth, i*textHeight, updateRectWidth, textHeight, tmpSprPtr);
+      mTft.pushImageDMA(updateStartCol * textWidth, i*textHeight, updateRectWidth, textHeight, mTmpSprPtr[mWriteTmpSpr]);
       mTft.endWrite();
 #endif
-      tmpSpr->deleteSprite();
 
       mWriteTmpSpr ^= 1;
     }
@@ -298,11 +300,11 @@ void tftDispSPI::update1LineText16bppBuffer(int startCol, int endCol, TFT_eSprit
 void tftDispSPI::lcdPushProc()
 {
 #ifdef DO_PUSHIMAGE_IN_ANOTHERCORE
-  if (mTft.dmaBusy()) return;
+  mTft.dmaWait();
   sem_acquire_blocking(&xSemLcdPushWait);
   const int textHeight = sTextHeight[mFontType];
   mTft.startWrite();
-  mTft.pushImageDMA(0, mTmpSprYPos[mReadTmpSpr], VIEW_WIDTH, textHeight, mTmpSprPtr[mReadTmpSpr]);
+  mTft.pushImageDMA(mTmpSprXPos[mReadTmpSpr], mTmpSprYPos[mReadTmpSpr], mTmpSpr[mReadTmpSpr].width(), textHeight, mTmpSprPtr[mReadTmpSpr]);
   mTft.endWrite();
   sem_release(&xSemLcdPushMutex);
   mReadTmpSpr ^= 1;
