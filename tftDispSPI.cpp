@@ -492,7 +492,7 @@ void tftDispSPI::set_attribute( int n )
 			
 		case 40:
       mTextColor &= 0x0f;
-			mTextColor &= 1 << 4;//TFT_BLACK;
+			mTextColor |= 1 << 4;//TFT_BLACK;
 			break;
 		case 41:
       mTextColor &= 0x0f;
