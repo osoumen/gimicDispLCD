@@ -262,6 +262,9 @@ void tftDispSPI::update1LineText16bppBuffer(uint16_t *buffer, int line)
       if (fg_color != TFT_TRANSPARENT) {
         mTmpSpr[mWriteTmpSpr].drawFastHLine(drawPos * textWidth, textHeight-1, textWidth, fg_color);
       }
+      else {
+        mTmpSpr[mWriteTmpSpr].pushImage(0, textHeight-1, VIEW_WIDTH, 1, mBgSprPtr+VIEW_WIDTH*((line+1)*textHeight-1));
+      }
     }
     else if (fontHeight == 11) {
       // 中フォントのサイズは11pxなので12段目を背景色で描画する
