@@ -258,11 +258,20 @@ private:
 		kSmallFont,
 		kNormalFont
 	};
+  typedef struct ScreenGlyph {
+    uint8_t   b_f_col;
+    uint8_t   attr;
+    uint16_t  glyph;  // 0xffffは２バイト文字の２バイト目を表す
+    bool operator==(const ScreenGlyph& rhs) const {
+      return (b_f_col == rhs.b_f_col && attr == rhs.attr && glyph == rhs.glyph);
+    }
+  } ScreenGlyph;
+
   static const int	VIEW_WIDTH = 320;
   static const int	VIEW_HEIGHT = 240;
 	static const int	BG_BUFF_NUM = 4;
-	static const int	MAX_LINES = 30;
-	static const int	MAX_COLUMNS = 80;
+	static const int	MAX_LINES = VIEW_HEIGHT / 8;
+	static const int	MAX_COLUMNS = VIEW_WIDTH / 4;
 	static const int	STYLE_BOLD = 0x01;
 	static const int	STYLE_UNDERLINED = 0x02;
 	static const int	STYLE_BLINKED = 0x04;
@@ -297,7 +306,7 @@ private:
   int           m2ByteGlyphBytes;
   const uint8_t *mAsciiGlyphData;
   const uint8_t *m2ByteGlyphData;
-  static char   mScreenChars[MAX_LINES*MAX_COLUMNS*3];
+  static ScreenGlyph   mScreenChars[MAX_LINES*MAX_COLUMNS];
 #ifdef SINGLEBYTEGLYPH_TO_RAM
   static uint8_t mAsciiGlyphCatch[16*256];
 #endif

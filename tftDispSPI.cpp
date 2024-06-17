@@ -51,7 +51,7 @@ const int sTextHeight[3] PROGMEM = {8, 12, 16};
 const int sTextWidth[3] PROGMEM = {4, 5, 8};
 const int sRowChars[3] PROGMEM = {80, 64, 40};
 
-char   tftDispSPI::mScreenChars[MAX_LINES*MAX_COLUMNS*3];
+tftDispSPI::ScreenGlyph   tftDispSPI::mScreenChars[MAX_LINES*MAX_COLUMNS];
 #ifdef SINGLEBYTEGLYPH_TO_RAM
 uint8_t tftDispSPI::mAsciiGlyphCatch[16*256];
 #endif
@@ -99,7 +99,7 @@ void tftDispSPI::init()
   mCursSprPtr = (uint16_t*)mCursSpr.createSprite(imgcurs[0], imgcurs[1]);
   mCursSpr.pushImage(0, 0, imgcurs[0], imgcurs[1], &imgcurs[2]);
   set_charsize(kNormalFont);
-  memset(mScreenChars, 0, (3 * VIEW_WIDTH * VIEW_HEIGHT) / (sTextHeight[kNormalFont] * sTextWidth[kNormalFont]));
+  memset(mScreenChars, 0, sizeof(mScreenChars));
   mTft.initDMA();
 #ifdef DO_PUSHIMAGE_IN_ANOTHERCORE
   sem_init(&xSemLcdPushWait, 0, 2);
@@ -246,11 +246,12 @@ void tftDispSPI::update1LineText16bppBuffer(int startCol, int endCol, TFT_eSprit
   const int rowChars = endCol - startCol;
   char glyphFirstByte;
   bool reading2ByteCode = false;
-  const char *lineText = &mScreenChars[(sRowChars[mFontType] * line + startCol) * 3]; 
+  const ScreenGlyph *lineText = &mScreenChars[sRowChars[mFontType] * line + startCol]; 
   for (int drawPos=0; drawPos<rowChars; ++drawPos) {
-    const uint8_t fontColor = *(lineText++);
-    const uint8_t fontStyle = *(lineText++);
-    const char  glyph = *(lineText++);
+    const uint8_t fontColor = lineText->b_f_col;
+    const uint8_t fontStyle = lineText->attr;
+    const char  glyph = lineText->glyph;
+    ++lineText;
     if (reading2ByteCode) {
       int twoByteGlyph = sjisToLiner((glyphFirstByte << 8) | glyph);
       uint16_t fg_color = edisp_4bit_palette[fontColor & 0x0f];
@@ -382,19 +383,17 @@ void tftDispSPI::puts_(const char* str, uint32_t max_len)
 
     // すでにある文字と同じか画面外の場合は更新しない
     int drawPos = 0;
-    int screenCharInd = (rowChars * mTextPosY + mTextPosX) * 3;
+    int screenCharInd = rowChars * mTextPosY + mTextPosX;
     while (drawPos < lineLen) {
       if ((mTextPosX < rowChars) && (mTextPosY < endLine) && 
-          ((mScreenChars[screenCharInd] != back_foreColor) ||
-          (mScreenChars[screenCharInd+1] != mFontStyle) ||
-          (mScreenChars[screenCharInd+2] != lineText[drawPos]))) {
-        mScreenChars[screenCharInd] = back_foreColor;
-        mScreenChars[screenCharInd+1] = mFontStyle;
-        mScreenChars[screenCharInd+2] = lineText[drawPos];
+          ((mScreenChars[screenCharInd].b_f_col != back_foreColor) ||
+          (mScreenChars[screenCharInd].attr != mFontStyle) ||
+          (mScreenChars[screenCharInd].glyph != lineText[drawPos]))) {
+        mScreenChars[screenCharInd] = ScreenGlyph{back_foreColor, mFontStyle, lineText[drawPos]};
         ++numUpdatesPerLine;
       }
       mTextPosX += 1;
-      screenCharInd += 3;
+      screenCharInd += 1;
       ++drawPos;
     }
     if (numUpdatesPerLine > 0) {
@@ -435,7 +434,7 @@ void tftDispSPI::clear(void)
 {
 	mTextPosX = mTextPosY = 0;
   mBgSpr.fillSprite(TFT_BLACK);
-  memset(mScreenChars, 0, (3 * VIEW_WIDTH * VIEW_HEIGHT) / (sTextHeight[mFontType] * sTextWidth[mFontType]));
+  memset(mScreenChars, 0, sizeof(mScreenChars));
   setUpdateArea(0, VIEW_WIDTH, 0, VIEW_HEIGHT);
 }
 
@@ -606,27 +605,27 @@ void tftDispSPI::del_to_end()
 {
   int textHeight = sTextHeight[mFontType];
   int textWidth = sTextWidth[mFontType];
-  int delSt = (sRowChars[mFontType] * mTextPosY + mTextPosX) * 3;
-  int delEnd = delSt + (sRowChars[mFontType] - mTextPosX) * 3;
-  if ((delSt < 0) || (delEnd >= sizeof(mScreenChars)) || (mTextPosX >= sRowChars[mFontType])) return;
+  int delSt = sRowChars[mFontType] * mTextPosY + mTextPosX;
+  int delEnd = delSt + sRowChars[mFontType] - mTextPosX;
+  if ((delSt < 0) || (delEnd >= (MAX_LINES*MAX_COLUMNS)) || (mTextPosX >= sRowChars[mFontType])) return;
 
   int unchanged = 0;
   int headUnchanged = 0;
   int tailUnchanged = 0;
-  const char *ptr = &mScreenChars[delSt + 2];
+  const ScreenGlyph *ptr = &mScreenChars[delSt];
   for (int i=mTextPosX; i<sRowChars[mFontType]; ++i) {
-    if (*ptr == 0) {
+    if (ptr->glyph == 0) {
       unchanged++;
     }
     else {
       if (unchanged > 0 && unchanged == (i-mTextPosX)) headUnchanged = unchanged;
       unchanged = 0;
     }
-    ptr += 3;
+    ++ptr;
   }
   tailUnchanged = unchanged;
 
-  memset(&mScreenChars[delSt], 0, (sRowChars[mFontType] - mTextPosX) * 3);
+  memset(&mScreenChars[delSt], 0, (sRowChars[mFontType] - mTextPosX) * sizeof(ScreenGlyph));
   setUpdateArea((mTextPosX + headUnchanged) * textWidth, VIEW_WIDTH - tailUnchanged * textWidth, textHeight * mTextPosY, textHeight * (mTextPosY + 1));
 }
 
@@ -634,27 +633,27 @@ void tftDispSPI::del_row()
 {
   int textHeight = sTextHeight[mFontType];
   int textWidth = sTextWidth[mFontType];
-  int delSt = (sRowChars[mFontType] * mTextPosY) * 3;
-  int delEnd = delSt + sRowChars[mFontType] * 3;
-  if ((delSt < 0) || (delEnd >= sizeof(mScreenChars))) return;
+  int delSt = sRowChars[mFontType] * mTextPosY;
+  int delEnd = delSt + sRowChars[mFontType];
+  if ((delSt < 0) || (delEnd >= (MAX_LINES*MAX_COLUMNS))) return;
 
   int unchanged = 0;
   int headUnchanged = 0;
   int tailUnchanged = 0;
-  const char *ptr = &mScreenChars[delSt + 2];
+  const ScreenGlyph *ptr = &mScreenChars[delSt];
   for (int i=0; i<sRowChars[mFontType]; ++i) {
-    if (*ptr == 0) {
+    if (ptr->glyph == 0) {
       unchanged++;
     }
     else {
       if (unchanged > 0 && unchanged == i) headUnchanged = unchanged;
       unchanged = 0;
     }
-    ptr += 3;
+    ++ptr;
   }
   tailUnchanged = unchanged;
 
-  memset(&mScreenChars[delSt], 0, sRowChars[mFontType] * 3);
+  memset(&mScreenChars[delSt], 0, sRowChars[mFontType] * sizeof(ScreenGlyph));
   setUpdateArea(headUnchanged * textWidth, VIEW_WIDTH - tailUnchanged * textWidth, textHeight * mTextPosY, textHeight * (mTextPosY + 1));
 }
 
@@ -662,23 +661,23 @@ void tftDispSPI::del(int n)
 {
   int textHeight = sTextHeight[mFontType];
   int textWidth = sTextWidth[mFontType];
-  int delSt = (sRowChars[mFontType] * mTextPosY + mTextPosX) * 3;
-  int delEnd = delSt + n * 3;
-  if ((delSt < 0) || (delEnd >= sizeof(mScreenChars))) return;
+  int delSt = sRowChars[mFontType] * mTextPosY + mTextPosX;
+  int delEnd = delSt + n;
+  if ((delSt < 0) || (delEnd >= (MAX_LINES*MAX_COLUMNS))) return;
 
   int unchanged = 0;
   int headUnchanged = 0;
   int tailUnchanged = 0;
-  const char *ptr = &mScreenChars[delSt + 2];
+  const ScreenGlyph *ptr = &mScreenChars[delSt];
   for (int i=mTextPosX; i<(mTextPosX+n); ++i) {
-    if (*ptr == 0) {
+    if (ptr->glyph == 0) {
       unchanged++;
     }
     else {
       if (unchanged > 0 && unchanged == (i-mTextPosX)) headUnchanged = unchanged;
       unchanged = 0;
     }
-    ptr += 3;
+    ++ptr;
   }
   tailUnchanged = unchanged;
 
@@ -727,7 +726,7 @@ void tftDispSPI::set_charsize(int x)
     //   mTmpSpr[i].setColorDepth(16);
     //   mTmpSprPtr[i] = (uint16_t*)mTmpSpr[i].createSprite(VIEW_WIDTH, textHeight);
     // }
-    memset(mScreenChars, 0, (3 * VIEW_WIDTH*VIEW_HEIGHT) / (sTextHeight[mFontType] * sTextWidth[mFontType]));
+    memset(mScreenChars, 0, sizeof(mScreenChars));
 
     switch(x) {
       case kTinyFont:
