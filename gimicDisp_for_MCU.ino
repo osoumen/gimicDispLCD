@@ -20,7 +20,6 @@ uint8_t button_input=0;
 uint8_t button_ipol=0;
 volatile bool i2c_reading;
 uint8_t i2c_reading_address;
-uint32_t updateTime;
 uint32_t tpUpdateTime;
 uint32_t lastTpDownTime;
 uint16_t tp_X, tp_Y, tp_On=0;
@@ -123,6 +122,7 @@ void setup1() {
   doTPCallibration();
 
   showStartupScreen();
+  tft.updateContent();
 }
 
 void showStartupScreen() {
@@ -141,54 +141,52 @@ void loop() {
 void loop1() {
 #endif
   uint32_t updateStartTime = millis();
+  bool draw = false;
   while (Serial1.available() > 0) {
     parser.ParseByte(Serial1.read());
+    draw = true;
   }
   // while (Serial.available() > 0) {
   //   parser.ParseByte(Serial.read());
   // }
 
-  if ((millis() - updateTime) > 10) {
-    if (tft.updateContent()) {
-      updateTime = millis();
-
-      uint16_t x,y;
-      bool isOn = tft.getTouch(&x, &y, TOUCH_THRESHOLD);
-      if (isOn == false && tp_On == true) {
-        Serial1.printf("\x1b[<%d;%d;%dM", MOUSE_BTN1_REL | IS_TP, x, y);
-        // Serial.printf("\x1b[<%d;%d;%dM\n", MOUSE_BTN1_REL | IS_TP, x, y);
+  if ((millis() - tpUpdateTime) > 10) {
+    tpUpdateTime = millis();
+    uint16_t x,y;
+    bool isOn = tft.getTouch(&x, &y, TOUCH_THRESHOLD);
+    if (isOn == false && tp_On == true) {
+      Serial1.printf("\x1b[<%d;%d;%dM", MOUSE_BTN1_REL | IS_TP, x, y);
+      // Serial.printf("\x1b[<%d;%d;%dM\n", MOUSE_BTN1_REL | IS_TP, x, y);
+      tp_X = x;
+      tp_Y = y;
+      tp_On = false;
+      tft.hideCursorPointer();
+      draw = true;
+    }
+    else if (isOn) {
+      int btnState = IS_TP;
+      if (tp_On == false) {
+        btnState |= MOUSE_BTN1;
+        if ((millis() - lastTpDownTime) < 500) {   // TODO: ダブルタップ時間を調整
+          int distance_x = (tp_X - x);
+          int distance_y = (tp_Y - y);
+          if ((distance_x * distance_x + distance_y * distance_y) < 16*16) {
+            btnState |= MOUSE_BTN_DBL_CLK;
+          }
+        }
+        tp_X = tp_Y = 9999;
+        tp_On = true;
+        lastTpDownTime = millis();
+      }
+      if ((x != tp_X) || (y != tp_Y)) {
+        Serial1.printf("\x1b[<%d;%d;%dM", btnState, x, y);
+        // Serial.printf("\x1b[<%d;%d;%dM\n", btnState, x, y);
         tp_X = x;
         tp_Y = y;
-        tp_On = false;
-        tft.hideCursorPointer();
       }
-      else if (isOn) {
-        int btnState = IS_TP;
-        if (tp_On == false) {
-          btnState |= MOUSE_BTN1;
-          if ((millis() - lastTpDownTime) < 500) {   // TODO: ダブルタップ時間を調整
-            int distance_x = (tp_X - x);
-            int distance_y = (tp_Y - y);
-            if ((distance_x * distance_x + distance_y * distance_y) < 16*16) {
-              btnState |= MOUSE_BTN_DBL_CLK;
-            }
-          }
-          tp_X = tp_Y = 9999;
-          tp_On = true;
-          lastTpDownTime = millis();
-        }
-        if ((x != tp_X) || (y != tp_Y)) {
-          Serial1.printf("\x1b[<%d;%d;%dM", btnState, x, y);
-          // Serial.printf("\x1b[<%d;%d;%dM\n", btnState, x, y);
-          tp_X = x;
-          tp_Y = y;
-        }
-        tft.setCursorPointer(x, y);
-      }
+      tft.setCursorPointer(x, y);
+      draw = true;
     }
-  #ifdef ENABLE_SERIAL_OUT
-    Serial.println(updateTime - updateStartTime);
-  #endif
   }
 
   if (Serial1.overflow()) {
@@ -196,6 +194,13 @@ void loop1() {
     tft.move(0,0);
     tft.set_attribute(17);
     tft.puts_("!!Overflowed!!");
+    draw = true;
+  }
+  if (draw) {
+    tft.updateContent();
+#ifdef ENABLE_SERIAL_OUT
+    Serial.println(millis() - updateStartTime);
+#endif
   }
 }
 
