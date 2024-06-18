@@ -261,9 +261,12 @@ private:
   typedef struct ScreenGlyph {
     uint8_t   b_f_col;
     uint8_t   attr;
-    uint16_t  glyph;  // 0xffffは２バイト文字の２バイト目を表す
+    int16_t   glyph;  // 負数はマルチバイト文字の開始位置へのオフセットを表す
     bool operator==(const ScreenGlyph& rhs) const {
       return (b_f_col == rhs.b_f_col && attr == rhs.attr && glyph == rhs.glyph);
+    }
+    bool operator!=(const ScreenGlyph& rhs) const {
+      return (b_f_col != rhs.b_f_col || attr != rhs.attr || glyph != rhs.glyph);
     }
   } ScreenGlyph;
 
@@ -302,6 +305,8 @@ private:
   int     		  mTextPosY;
 	uint8_t 		  mTextColor;
 	uint8_t 		  mFontStyle;
+  char          mGlyphFirstByte;
+  bool          mReading2ByteCode;
   int           mAsciiGlyphBytes;
   int           m2ByteGlyphBytes;
   const uint8_t *mAsciiGlyphData;

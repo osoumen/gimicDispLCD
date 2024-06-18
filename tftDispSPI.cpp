@@ -77,6 +77,8 @@ tftDispSPI::tftDispSPI()
 , mTextPosY(0)
 , mTextColor(10)
 , mFontStyle(0)
+, mGlyphFirstByte(0)
+, mReading2ByteCode(false)
 , mPointerX(-POINTER_POSY_SIZE)
 , mPointerY(-POINTER_POSY_SIZE)
 {
@@ -244,38 +246,30 @@ void tftDispSPI::update1LineText16bppBuffer(int startCol, int endCol, TFT_eSprit
   const int textHeight = sTextHeight[mFontType];
   const int textWidth = sTextWidth[mFontType];
   const int rowChars = endCol - startCol;
-  char glyphFirstByte;
-  bool reading2ByteCode = false;
   const ScreenGlyph *lineText = &mScreenChars[sRowChars[mFontType] * line + startCol]; 
   for (int drawPos=0; drawPos<rowChars; ++drawPos) {
     const uint8_t fontColor = lineText->b_f_col;
     const uint8_t fontStyle = lineText->attr;
-    const char  glyph = lineText->glyph;
+    const int16_t glyph = lineText->glyph;
     ++lineText;
-    if (reading2ByteCode) {
-      int twoByteGlyph = sjisToLiner((glyphFirstByte << 8) | glyph);
+    if (glyph >= 256) {
+      int twoByteGlyph = glyph - 256;
       uint16_t fg_color = edisp_4bit_palette[fontColor & 0x0f];
       uint16_t bg_color = edisp_4bit_palette[fontColor >> 4];
-      drawGlyphTo16bppBuffer(m2ByteGlyphData+m2ByteGlyphBytes*twoByteGlyph, buffer, rowChars * textWidth, (drawPos-1)*textWidth, textWidth*2,fontHeight,fg_color,bg_color);
-      reading2ByteCode = false;
+      if ((drawPos+1) < rowChars)
+        drawGlyphTo16bppBuffer(m2ByteGlyphData+m2ByteGlyphBytes*twoByteGlyph, buffer, rowChars * textWidth, drawPos*textWidth, textWidth*2,fontHeight,fg_color,bg_color);
     }
     else {
-      if (glyph != 0) {
-        if ((0x81 <= glyph && glyph <= 0x9f) || (0xe0 <= glyph && glyph <= 0xef)) {
-          glyphFirstByte = glyph;
-          reading2ByteCode = true;
+      if (glyph > 0) {
+        uint16_t fg_color = edisp_4bit_palette[fontColor & 0x0f];
+        uint16_t bg_color = edisp_4bit_palette[fontColor >> 4];
+        if (glyph == ' ') {
+          if (bg_color != TFT_TRANSPARENT) {
+            spr->fillRect(drawPos*textWidth,0, textWidth,fontHeight, bg_color);
+          }
         }
         else {
-          uint16_t fg_color = edisp_4bit_palette[fontColor & 0x0f];
-          uint16_t bg_color = edisp_4bit_palette[fontColor >> 4];
-          if (glyph == ' ') {
-            if (bg_color != TFT_TRANSPARENT) {
-              spr->fillRect(drawPos*textWidth,0, textWidth,fontHeight, bg_color);
-            }
-          }
-          else {
-            drawGlyphTo16bppBuffer(mAsciiGlyphData+mAsciiGlyphBytes*glyph, buffer, rowChars * textWidth, drawPos*textWidth, textWidth,fontHeight,fg_color,bg_color);
-          }
+          drawGlyphTo16bppBuffer(mAsciiGlyphData+mAsciiGlyphBytes*glyph, buffer, rowChars * textWidth, drawPos*textWidth, textWidth,fontHeight,fg_color,bg_color);
         }
       }
     }
@@ -366,7 +360,9 @@ int tftDispSPI::getLineLength(const char *str)
 
 void tftDispSPI::puts_(const char* str, uint32_t max_len)
 {
-  char back_foreColor = (mFontStyle & STYLE_INVERTED) ? ((mTextColor << 4) | (mTextColor >> 4)) : mTextColor;
+  ScreenGlyph glyph;
+  glyph.b_f_col = (mFontStyle & STYLE_INVERTED) ? ((mTextColor << 4) | (mTextColor >> 4)) : mTextColor;
+  glyph.attr = mFontStyle;
   int startCol = 0;
   int textHeight = sTextHeight[mFontType];
   int textWidth = sTextWidth[mFontType];
@@ -385,15 +381,36 @@ void tftDispSPI::puts_(const char* str, uint32_t max_len)
     int drawPos = 0;
     int screenCharInd = rowChars * mTextPosY + mTextPosX;
     while (drawPos < lineLen) {
-      if ((mTextPosX < rowChars) && (mTextPosY < endLine) && 
-          ((mScreenChars[screenCharInd].b_f_col != back_foreColor) ||
-          (mScreenChars[screenCharInd].attr != mFontStyle) ||
-          (mScreenChars[screenCharInd].glyph != lineText[drawPos]))) {
-        mScreenChars[screenCharInd] = ScreenGlyph{back_foreColor, mFontStyle, lineText[drawPos]};
-        ++numUpdatesPerLine;
+      if (mReading2ByteCode) {
+        // 2バイト文字はバッファリングして句点コードの並びに変換する
+        ScreenGlyph glyph2 = glyph;
+        glyph2.glyph = -1;  // 負数はマルチバイト文字の開始位置へのオフセットを表す
+        glyph.glyph = sjisToLiner((mGlyphFirstByte << 8) | lineText[drawPos]) + 256;
+        if (((mTextPosX+1) < rowChars) && (mTextPosY < endLine) && ((mScreenChars[screenCharInd] != glyph) || (mScreenChars[screenCharInd+1] != glyph2))) {
+          mScreenChars[screenCharInd] = glyph;
+          mScreenChars[screenCharInd+1] = glyph2;
+          ++numUpdatesPerLine;
+        }
+        mReading2ByteCode = false;
+        mTextPosX += 2;
+        screenCharInd += 2;
       }
-      mTextPosX += 1;
-      screenCharInd += 1;
+      else {
+        if ((0x81 <= lineText[drawPos] && lineText[drawPos] <= 0x9f) || (0xe0 <= lineText[drawPos] && lineText[drawPos] <= 0xef)) {
+          mGlyphFirstByte = lineText[drawPos];
+          mReading2ByteCode = true;
+        }
+        else {
+          // 1バイト文字
+          glyph.glyph = lineText[drawPos];
+          if ((mTextPosX < rowChars) && (mTextPosY < endLine) && (mScreenChars[screenCharInd] != glyph)) {
+            mScreenChars[screenCharInd] = glyph;
+            ++numUpdatesPerLine;
+          }
+          mTextPosX += 1;
+          screenCharInd += 1;
+        }
+      }
       ++drawPos;
     }
     if (numUpdatesPerLine > 0) {
@@ -434,6 +451,7 @@ void tftDispSPI::clear(void)
 {
 	mTextPosX = mTextPosY = 0;
   mBgSpr.fillSprite(TFT_BLACK);
+  mReading2ByteCode = false;
   memset(mScreenChars, 0, sizeof(mScreenChars));
   setUpdateArea(0, VIEW_WIDTH, 0, VIEW_HEIGHT);
 }
@@ -442,17 +460,20 @@ void tftDispSPI::move(int r, int c)
 {
 	mTextPosY = r;
 	mTextPosX = c;
+  mReading2ByteCode = false;
 }
 
 void tftDispSPI::curmove(int r, int c)
 {
 	mTextPosY += r;
 	mTextPosX += c;
+  mReading2ByteCode = false;
 }
 
 void tftDispSPI::cur_rowtop(void)
 {
 	mTextPosX = 0;
+  mReading2ByteCode = false;
 }
 
 void tftDispSPI::set_attribute( int n )
@@ -627,6 +648,7 @@ void tftDispSPI::del_to_end()
 
   memset(&mScreenChars[delSt], 0, (sRowChars[mFontType] - mTextPosX) * sizeof(ScreenGlyph));
   setUpdateArea((mTextPosX + headUnchanged) * textWidth, VIEW_WIDTH - tailUnchanged * textWidth, textHeight * mTextPosY, textHeight * (mTextPosY + 1));
+  mReading2ByteCode = false;
 }
 
 void tftDispSPI::del_row()
@@ -655,6 +677,7 @@ void tftDispSPI::del_row()
 
   memset(&mScreenChars[delSt], 0, sRowChars[mFontType] * sizeof(ScreenGlyph));
   setUpdateArea(headUnchanged * textWidth, VIEW_WIDTH - tailUnchanged * textWidth, textHeight * mTextPosY, textHeight * (mTextPosY + 1));
+  mReading2ByteCode = false;
 }
 
 void tftDispSPI::del(int n)
@@ -681,8 +704,9 @@ void tftDispSPI::del(int n)
   }
   tailUnchanged = unchanged;
 
-  memset(&mScreenChars[delSt], 0, n * 3);
+  memset(&mScreenChars[delSt], 0, n * sizeof(ScreenGlyph));
   setUpdateArea((mTextPosX + headUnchanged) * textWidth, (mTextPosX + n - tailUnchanged) * textWidth, textHeight * mTextPosY, textHeight * (mTextPosY + 1));
+  mReading2ByteCode = false;
 }
 
 void tftDispSPI::save_attribute(int n)
@@ -764,6 +788,7 @@ void tftDispSPI::set_charsize(int x)
         break;
     }
   }
+  mReading2ByteCode = false;
 }
 
 void tftDispSPI::set_bgbuff(int x)
