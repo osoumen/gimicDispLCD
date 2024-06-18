@@ -297,10 +297,8 @@ private:
   int           mWriteTmpSpr;
   int           mReadTmpSpr;
   int           mFontType;
-  int           mUpdateStartX;
-  int           mUpdateEndX;
-  int           mUpdateStartY;
-  int           mUpdateEndY;
+  int           mUpdateStartCol[MAX_LINES];
+  int           mUpdateEndCol[MAX_LINES];
   int     		  mTextPosX;
   int     		  mTextPosY;
 	uint8_t 		  mTextColor;
@@ -320,6 +318,7 @@ private:
 
   static int  sjisToLiner(int sjis);
 	static int	getLineLength(const char *str);
+  void        setUpdateArea(int startCol, int endCol, int row);
 	void			  setUpdateArea(int startX, int endX, int startY, int endY);
   uint16_t    conv555To565(int col) { return ((col << 1) & 0xffc0) | (col & 0x1f); }
   void        redrawCursorPointerToSpr(int updateX1, int updateX2, TFT_eSprite *spr, int line);

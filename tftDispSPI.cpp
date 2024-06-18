@@ -69,10 +69,6 @@ tftDispSPI::tftDispSPI()
 , mCursSprPtr(nullptr)
 , mWriteTmpSpr(0)
 , mReadTmpSpr(0)
-, mUpdateStartX(VIEW_WIDTH)
-, mUpdateEndX(0)
-, mUpdateStartY(VIEW_HEIGHT)
-, mUpdateEndY(0)
 , mTextPosX(0)
 , mTextPosY(0)
 , mTextColor(10)
@@ -82,6 +78,10 @@ tftDispSPI::tftDispSPI()
 , mPointerX(-POINTER_POSY_SIZE)
 , mPointerY(-POINTER_POSY_SIZE)
 {
+  for (int i=0; i<MAX_LINES; ++i) {
+    mUpdateStartCol[i] = MAX_COLUMNS;
+    mUpdateEndCol[i] = 0;
+  }
 }
 
 tftDispSPI::~tftDispSPI()
@@ -175,18 +175,24 @@ int tftDispSPI::sjisToLiner(int sjis)
 
 bool tftDispSPI::updateContent()
 {
-	if (mUpdateStartY < mUpdateEndY && mUpdateStartX < mUpdateEndX) {
 #ifndef DO_PUSHIMAGE_IN_ANOTHERCORE
-    if (mTft.dmaBusy()) return false;
+  if (mTft.dmaBusy()) return false;
 #endif
-    const int textHeight = sTextHeight[mFontType];
-    const int textWidth = sTextWidth[mFontType];
-    const int updateStartCol = mUpdateStartX / textWidth;
-    const int updateEndCol = (mUpdateEndX + textWidth - 1) / textWidth;
-    const int updateRectWidth = (updateEndCol - updateStartCol) * textWidth;
-    const int updateStartRow = mUpdateStartY / textHeight;
-    const int updateEndRow = (mUpdateEndY + textHeight - 1) / textHeight;
-    for (int i=updateStartRow; i<updateEndRow; ++i) {
+  const int textHeight = sTextHeight[mFontType];
+  const int textWidth = sTextWidth[mFontType];
+  const int updateEndRow = VIEW_HEIGHT / textHeight;  // TODO: 定数化
+  for (int i=0; i<updateEndRow; ++i) {
+    if (mUpdateStartCol[i] < mUpdateEndCol[i]) {
+      int updateStartCol = mUpdateStartCol[i];
+      int updateEndCol = mUpdateEndCol[i];
+      // ２バイト文字の境界にある場合は前後に伸ばす
+      const ScreenGlyph *lineText = &mScreenChars[sRowChars[mFontType] * i];
+      if (lineText[updateStartCol].glyph < 0) updateStartCol--;
+      if (lineText[updateEndCol].glyph < 0 && updateEndCol < sRowChars[mFontType]) updateEndCol++;
+      updateStartCol = max(0, updateStartCol);
+      updateEndCol = min(sRowChars[mFontType], updateEndCol);
+
+      const int updateRectWidth = (updateEndCol - updateStartCol) * textWidth;
 #ifdef DO_PUSHIMAGE_IN_ANOTHERCORE
       sem_acquire_blocking(&xSemLcdPushMutex);
 #endif
@@ -214,12 +220,10 @@ bool tftDispSPI::updateContent()
 #endif
 
       mWriteTmpSpr ^= 1;
+      mUpdateStartCol[i] = MAX_COLUMNS;
+      mUpdateEndCol[i] = 0;
     }
-    mUpdateStartX = VIEW_WIDTH;
-    mUpdateEndX = 0;
-    mUpdateStartY = VIEW_HEIGHT;
-    mUpdateEndY = 0;
-	}
+  }
   return true;
 }
 
@@ -332,21 +336,29 @@ void  tftDispSPI::drawGlyphTo16bppBuffer(const uint8_t *glyphSt, uint16_t *dst, 
   }
 }
 
+void	tftDispSPI::setUpdateArea(int startCol, int endCol, int row)
+{
+  if (row < MAX_LINES) {
+    if (startCol < mUpdateStartCol[row]) {
+      mUpdateStartCol[row] = startCol;
+    }
+    if (endCol > mUpdateEndCol[row]) {
+      mUpdateEndCol[row] = endCol;
+    }
+  }
+}
+
 void	tftDispSPI::setUpdateArea(int startX, int endX, int startY, int endY)
 {
-  if (startX == endX || startY == endY) return;
-  if (startX < mUpdateStartX) {
-    mUpdateStartX = max(0,startX);
-  }
-  if (endX > mUpdateEndX) {
-    mUpdateEndX = min(VIEW_WIDTH,endX);
-  }
-  if (startY < mUpdateStartY) {
-    mUpdateStartY = max(0,startY);
-  }
-  if (endY > mUpdateEndY) {
-    mUpdateEndY = min(VIEW_HEIGHT,endY);
-  }
+    const int textHeight = sTextHeight[mFontType];
+    const int textWidth = sTextWidth[mFontType];
+    const int updateStartCol = startX / textWidth;
+    const int updateEndCol = (endX + textWidth - 1) / textWidth;
+    const int updateStartRow = startY / textHeight;
+    const int updateEndRow = (endY + textHeight - 1) / textHeight;
+    for (int i=updateStartRow; i<updateEndRow; ++i) {
+      setUpdateArea(updateStartCol, updateEndCol, i);
+    }
 }
 
 int tftDispSPI::getLineLength(const char *str)
@@ -372,9 +384,7 @@ void tftDispSPI::puts_(const char* str, uint32_t max_len)
   do {
     const char *lineText = &str[startCol];
     int lineLen = getLineLength(lineText);
-    int lineStartX = mTextPosX * textWidth;
-    int lineStartY = mTextPosY * textHeight;
-    int lineEndY = (mTextPosY + 1) * textHeight;
+    int lineStartCol = mTextPosX;
     int numUpdatesPerLine = 0;
 
     // すでにある文字と同じか画面外の場合は更新しない
@@ -414,7 +424,7 @@ void tftDispSPI::puts_(const char* str, uint32_t max_len)
       ++drawPos;
     }
     if (numUpdatesPerLine > 0) {
-      setUpdateArea(lineStartX, mTextPosX * textWidth, lineStartY, lineEndY);
+      setUpdateArea(lineStartCol, mTextPosX, mTextPosY);
     }
     // 改行コードがあれば次の行に進む処理
     startCol += lineLen;
@@ -453,7 +463,9 @@ void tftDispSPI::clear(void)
   mBgSpr.fillSprite(TFT_BLACK);
   mReading2ByteCode = false;
   memset(mScreenChars, 0, sizeof(mScreenChars));
-  setUpdateArea(0, VIEW_WIDTH, 0, VIEW_HEIGHT);
+  for (int i=0; i<MAX_LINES; ++i) {
+    setUpdateArea(0, sRowChars[mFontType], i);
+  }
 }
 
 void tftDispSPI::move(int r, int c)
@@ -647,7 +659,7 @@ void tftDispSPI::del_to_end()
   tailUnchanged = unchanged;
 
   memset(&mScreenChars[delSt], 0, (sRowChars[mFontType] - mTextPosX) * sizeof(ScreenGlyph));
-  setUpdateArea((mTextPosX + headUnchanged) * textWidth, VIEW_WIDTH - tailUnchanged * textWidth, textHeight * mTextPosY, textHeight * (mTextPosY + 1));
+  setUpdateArea(mTextPosX + headUnchanged, sRowChars[mFontType] - tailUnchanged, mTextPosY);
   mReading2ByteCode = false;
 }
 
@@ -676,7 +688,7 @@ void tftDispSPI::del_row()
   tailUnchanged = unchanged;
 
   memset(&mScreenChars[delSt], 0, sRowChars[mFontType] * sizeof(ScreenGlyph));
-  setUpdateArea(headUnchanged * textWidth, VIEW_WIDTH - tailUnchanged * textWidth, textHeight * mTextPosY, textHeight * (mTextPosY + 1));
+  setUpdateArea(headUnchanged, sRowChars[mFontType] - tailUnchanged, mTextPosY);
   mReading2ByteCode = false;
 }
 
@@ -705,7 +717,7 @@ void tftDispSPI::del(int n)
   tailUnchanged = unchanged;
 
   memset(&mScreenChars[delSt], 0, n * sizeof(ScreenGlyph));
-  setUpdateArea((mTextPosX + headUnchanged) * textWidth, (mTextPosX + n - tailUnchanged) * textWidth, textHeight * mTextPosY, textHeight * (mTextPosY + 1));
+  setUpdateArea(mTextPosX + headUnchanged, mTextPosX + n - tailUnchanged, mTextPosY);
   mReading2ByteCode = false;
 }
 
@@ -799,11 +811,9 @@ void tftDispSPI::set_bgbuff(int x)
 void tftDispSPI::clear_bgbuff(int x)
 {
 	mBgSpr.fillSprite(TFT_BLACK);
-  mUpdateStartX = 0;
-  mUpdateEndX = VIEW_WIDTH;
-  mUpdateStartY = 0;
-  mUpdateEndY = VIEW_HEIGHT;
-  setUpdateArea(0, VIEW_WIDTH, 0, VIEW_HEIGHT);
+  for (int i=0; i<MAX_LINES; ++i) {
+    setUpdateArea(0, sRowChars[mFontType], i);
+  }
 }
 
 void tftDispSPI::draw_fillrect(int bg, int w, int h, int x, int y, int col )
