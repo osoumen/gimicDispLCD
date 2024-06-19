@@ -9,7 +9,7 @@
 #include "image.h"
 
 // #define ENABLE_CURSOR_POINTER 1
-// #define DO_PUSHIMAGE_IN_ANOTHERCORE 1
+#define DO_PUSHIMAGE_IN_ANOTHERCORE 1
 
 const uint16_t imgcurs[] PROGMEM = {
     8, 12,
@@ -59,6 +59,7 @@ uint8_t tftDispSPI::mAsciiGlyphCatch[16*256];
 #ifdef DO_PUSHIMAGE_IN_ANOTHERCORE
 semaphore_t xSemLcdPushWait;
 semaphore_t xSemLcdPushMutex;
+mutex_t xSPIMutex;
 #endif
 
 tftDispSPI::tftDispSPI()
@@ -106,6 +107,7 @@ void tftDispSPI::init()
 #ifdef DO_PUSHIMAGE_IN_ANOTHERCORE
   sem_init(&xSemLcdPushWait, 0, 2);
   sem_init(&xSemLcdPushMutex, 2, 2);
+  mutex_init(&xSPIMutex);
 #endif
 }
 
@@ -141,7 +143,15 @@ void  tftDispSPI::set_calibrate(const uint16_t *calData)
 
 bool  tftDispSPI::getTouch(uint16_t *x, uint16_t *y, uint16_t threshold)
 {
-  return mTft.getTouch(x, y, threshold);
+  bool result;
+#ifdef DO_PUSHIMAGE_IN_ANOTHERCORE
+  mutex_enter_blocking(&xSPIMutex);
+#endif
+  result = mTft.getTouch(x, y, threshold);
+#ifdef DO_PUSHIMAGE_IN_ANOTHERCORE
+  mutex_exit(&xSPIMutex);
+#endif
+  return result;
 }
 
 int tftDispSPI::sjisToLiner(int sjis)
@@ -175,9 +185,6 @@ int tftDispSPI::sjisToLiner(int sjis)
 
 bool tftDispSPI::updateContent()
 {
-#ifndef DO_PUSHIMAGE_IN_ANOTHERCORE
-  if (mTft.dmaBusy()) return false;
-#endif
   const int textHeight = sTextHeight[mFontType];
   const int textWidth = sTextWidth[mFontType];
   const int updateEndRow = VIEW_HEIGHT / textHeight;  // TODO: 定数化
@@ -299,12 +306,13 @@ void tftDispSPI::update1LineText16bppBuffer(int startCol, int endCol, TFT_eSprit
 void tftDispSPI::lcdPushProc()
 {
 #ifdef DO_PUSHIMAGE_IN_ANOTHERCORE
-  mTft.dmaWait();
   sem_acquire_blocking(&xSemLcdPushWait);
+  mutex_enter_blocking(&xSPIMutex);
   const int textHeight = sTextHeight[mFontType];
   mTft.startWrite();
   mTft.pushImageDMA(mTmpSprXPos[mReadTmpSpr], mTmpSprYPos[mReadTmpSpr], mTmpSpr[mReadTmpSpr].width(), textHeight, mTmpSprPtr[mReadTmpSpr]);
   mTft.endWrite();
+  mutex_exit(&xSPIMutex);
   sem_release(&xSemLcdPushMutex);
   mReadTmpSpr ^= 1;
 #endif
