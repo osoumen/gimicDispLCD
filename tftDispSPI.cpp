@@ -762,14 +762,6 @@ void tftDispSPI::set_charsize(int x)
     int textHeight = sTextHeight[x];
     int textLines = VIEW_HEIGHT / textHeight;
     mFontType = x;
-    // for (int i=0; i<2; ++i) {
-    //   if (mTmpSprPtr[i] != nullptr) {
-    //     mTmpSpr[i].deleteSprite();
-    //     mTmpSprPtr[i] = nullptr;
-    //   }
-    //   mTmpSpr[i].setColorDepth(16);
-    //   mTmpSprPtr[i] = (uint16_t*)mTmpSpr[i].createSprite(VIEW_WIDTH, textHeight);
-    // }
     memset(mScreenChars, 0, sizeof(mScreenChars));
 
     switch(x) {
