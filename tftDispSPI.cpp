@@ -362,8 +362,8 @@ void	tftDispSPI::setUpdateArea(int startX, int endX, int startY, int endY)
     const int textWidth = sTextWidth[mFontType];
     const int updateStartCol = startX / textWidth;
     const int updateEndCol = (endX + textWidth - 1) / textWidth;
-    const int updateStartRow = startY / textHeight;
-    const int updateEndRow = (endY + textHeight - 1) / textHeight;
+    const int updateStartRow = max(0, startY / textHeight);
+    const int updateEndRow = min(MAX_LINES, (endY + textHeight - 1) / textHeight);
     for (int i=updateStartRow; i<updateEndRow; ++i) {
       setUpdateArea(updateStartCol, updateEndCol, i);
     }
