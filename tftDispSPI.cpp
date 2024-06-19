@@ -835,7 +835,7 @@ void tftDispSPI::draw_line(int bg, int x0, int y0, int x1, int y1, int col )
 {
   uint16_t tft_col = conv555To565(col);
   mBgSpr.drawLine(x0, y0, x1, y1, tft_col);
-  setUpdateArea(x0, x1, y0, y1);
+  setUpdateArea(min(x0,x1), max(x0,x1)+1, min(y0,y1), max(y0,y1)+1);
 }
 
 void tftDispSPI::draw_ellipse(int bg, int fill, int cx, int cy, int xw, int yh, int col )
