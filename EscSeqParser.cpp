@@ -435,9 +435,37 @@ void EscSeqParser::ParseEscapeSequence(const std::string &seq)
 								case 12:
 								case 13:
 								case 14:
+                  break;
+#if defined(ARDUINO)
 								case 15:
-									// ボーレートの設定
+									if (Serial1) {
+                    Serial1.flush();
+                    Serial1.end();
+                    Serial1.begin(115200);
+                  }
 									break;
+                case 16:
+									if (Serial1) {
+                    Serial1.flush();
+                    Serial1.end();
+                    Serial1.begin(230400);
+                  }
+									break;
+                case 17:
+									if (Serial1) {
+                    Serial1.flush();
+                    Serial1.end();
+                    Serial1.begin(460800);
+                  }
+									break;
+                case 18:
+									if (Serial1) {
+                    Serial1.flush();
+                    Serial1.end();
+                    Serial1.begin(921600);
+                  }
+									break;
+#endif
 								case 20:
 								case 21:
 									mDisp->set_autocr((param==20)?1:0);
@@ -558,6 +586,19 @@ void EscSeqParser::ParseEscapeSequence(const std::string &seq)
 						}
 					}
 					break;
+#if defined(ARDUINO)
+        case 'y':
+          if (param_length > 0) {
+            std::string param_str = seq.substr(1, param_length);
+            int param;
+						if (ExtractParamString(param_str, &param, 1) == 1) {
+              if (param == 900) {
+                Serial1.printf("\x1b@%dx", 921600);
+              }
+            }
+          }
+          break;
+#endif
 			}
 			break;
 		case '7':
