@@ -26,6 +26,7 @@ uint32_t tpUpdateTime;
 uint32_t lastTpDownTime;
 uint16_t tp_X, tp_Y;
 bool tp_On=false;
+bool backLightOn=false;
 
 tftDispSPI tft;
 EscSeqParser parser(&tft);
@@ -149,7 +150,9 @@ void loop1() {
 
   if ((millis() - tpUpdateTime) > 10) {
     tpUpdateTime = millis();
-    draw = TouchPanelTask(draw);
+    if (backLightOn) {
+      draw = TouchPanelTask(draw);
+    }
   }
 
   if (Serial1.overflow()) {
@@ -268,6 +271,7 @@ void recv(int len) {
 #ifdef LCD_BACKLIGHT_PIN
       digitalWrite(LCD_BACKLIGHT_PIN, (data & 0x02)?LOW:HIGH);
 #endif
+      backLightOn = (data & 0x02)?false:true;
     }
   }
 }
