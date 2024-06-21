@@ -1,14 +1,4 @@
-#define BUTTON1_PIN_NO  4
-#define BUTTON2_PIN_NO  6
-#define BUTTON3_PIN_NO  7
-#define BUTTON4_PIN_NO  14
-#define BUTTON5_PIN_NO  26
-
-#define LCD_BACKLIGHT_PIN 13
-
-#define ENABLE_MULTI_CORE 1
-// #define ENABLE_SERIAL_OUT 1
-#define TOUCH_THRESHOLD 300
+#include "setup.h"
 
 #include "tftDispSPI.h"
 #include "EscSeqParser.h"
@@ -125,8 +115,8 @@ void setup1() {
 
   doTPCallibration();
 
-#ifdef LCD_BACKLIGHT_PIN
-  digitalWrite(LCD_BACKLIGHT_PIN, LOW);
+#ifdef TFT_BL
+  digitalWrite(TFT_BL, LOW);
 #endif
   tft.updateContent();
 }
@@ -148,12 +138,14 @@ void loop1() {
   //   parser.ParseByte(Serial.read());
   // }
 
+#ifdef TOUCH_CS
   if ((millis() - tpUpdateTime) > 10) {
     tpUpdateTime = millis();
     if (backLightOn) {
       draw = TouchPanelTask(draw);
     }
   }
+#endif
 
   if (Serial1.overflow()) {
     Serial1.flush();
@@ -268,8 +260,8 @@ void recv(int len) {
 #ifdef LED_BUILTIN
       digitalWrite(LED_BUILTIN, (data & 0x02)?LOW:HIGH);  // led g
 #endif
-#ifdef LCD_BACKLIGHT_PIN
-      digitalWrite(LCD_BACKLIGHT_PIN, (data & 0x02)?LOW:HIGH);
+#ifdef TFT_BL
+      digitalWrite(TFT_BL, (data & 0x02)?LOW:HIGH);
 #endif
       backLightOn = (data & 0x02)?false:true;
     }

@@ -1,9 +1,8 @@
 #ifndef tftDispSPI_h
 #define tftDispSPI_h
 
+#include "setup.h"
 #include <TFT_eSPI.h>
-
-#define SINGLEBYTEGLYPH_TO_RAM 1
 
 class tftDispSPI {
 public:
@@ -272,7 +271,6 @@ private:
 
   static const int	VIEW_WIDTH = 320;
   static const int	VIEW_HEIGHT = 240;
-	static const int	BG_BUFF_NUM = 4;
 	static const int	MAX_LINES = VIEW_HEIGHT / 8;
 	static const int	MAX_COLUMNS = VIEW_WIDTH / 4;
 	static const int	STYLE_BOLD = 0x01;

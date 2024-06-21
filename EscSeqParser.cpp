@@ -7,6 +7,9 @@
  */
 
 #include "EscSeqParser.h"
+#if defined(ARDUINO)
+#include "setup.h"
+#endif
 
 #if defined(__APPLE__) || defined(_WIN32)
 #include "edispSDL.h"
@@ -595,7 +598,7 @@ void EscSeqParser::ParseEscapeSequence(const std::string &seq)
             int param;
 						if (ExtractParamString(param_str, &param, 1) == 1) {
               if (param == 900) {
-                Serial1.printf("\x1b@%dx", 921600);
+                Serial1.printf("\x1b@%dx", UART_MAX_BAUD_RATE);
               }
             }
           }

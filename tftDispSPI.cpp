@@ -8,9 +8,6 @@
 #include "misaki_gothic.h"
 #include "image.h"
 
-// #define ENABLE_CURSOR_POINTER 1
-#define DO_PUSHIMAGE_IN_ANOTHERCORE 1
-
 const uint16_t imgcurs[] PROGMEM = {
     8, 12,
     0x0000,0xFFFF,0xFFFF,0xFFFF,0xFFFF,0xFFFF,0xFFFF,0xFFFF,
@@ -56,10 +53,12 @@ tftDispSPI::ScreenGlyph   tftDispSPI::mScreenChars[MAX_LINES*MAX_COLUMNS];
 uint8_t tftDispSPI::mAsciiGlyphCatch[16*256];
 #endif
 
-#ifdef DO_PUSHIMAGE_IN_ANOTHERCORE
+#ifdef ENABLE_MULTI_CORE
 semaphore_t xSemLcdPushWait;
 semaphore_t xSemLcdPushMutex;
+#ifdef TOUCH_CS
 mutex_t xSPIMutex;
+#endif
 #endif
 
 tftDispSPI::tftDispSPI()
@@ -92,8 +91,8 @@ tftDispSPI::~tftDispSPI()
 void tftDispSPI::init()
 {
   mTft.init();
-  mTft.invertDisplay(true);
-  mTft.setRotation(1);
+  mTft.invertDisplay(INVERT_DISPLAY);
+  mTft.setRotation(SCREEN_ROTATION);
   mTft.fillScreen(TFT_BLACK);
   mBgSpr.setColorDepth(16);
   mBgSpr.fillSprite(TFT_BLACK);
@@ -104,10 +103,12 @@ void tftDispSPI::init()
   set_charsize(kNormalFont);
   memset(mScreenChars, 0, sizeof(mScreenChars));
   mTft.initDMA();
-#ifdef DO_PUSHIMAGE_IN_ANOTHERCORE
+#ifdef ENABLE_MULTI_CORE
   sem_init(&xSemLcdPushWait, 0, 2);
   sem_init(&xSemLcdPushMutex, 2, 2);
+#ifdef TOUCH_CS
   mutex_init(&xSPIMutex);
+#endif
 #endif
 }
 
@@ -143,15 +144,19 @@ void  tftDispSPI::set_calibrate(const uint16_t *calData)
 
 bool  tftDispSPI::getTouch(uint16_t *x, uint16_t *y, uint16_t threshold)
 {
+#ifdef TOUCH_CS
   bool result;
-#ifdef DO_PUSHIMAGE_IN_ANOTHERCORE
+#ifdef ENABLE_MULTI_CORE
   mutex_enter_blocking(&xSPIMutex);
 #endif
   result = mTft.getTouch(x, y, threshold);
-#ifdef DO_PUSHIMAGE_IN_ANOTHERCORE
+#ifdef ENABLE_MULTI_CORE
   mutex_exit(&xSPIMutex);
 #endif
   return result;
+#else
+  return false;
+#endif
 }
 
 int tftDispSPI::sjisToLiner(int sjis)
@@ -200,7 +205,7 @@ bool tftDispSPI::updateContent()
       updateEndCol = min(sRowChars[mFontType], updateEndCol);
 
       const int updateRectWidth = (updateEndCol - updateStartCol) * textWidth;
-#ifdef DO_PUSHIMAGE_IN_ANOTHERCORE
+#ifdef ENABLE_MULTI_CORE
       sem_acquire_blocking(&xSemLcdPushMutex);
 #endif
       if (mTmpSprPtr[mWriteTmpSpr] != nullptr) {
@@ -216,7 +221,7 @@ bool tftDispSPI::updateContent()
 #if defined(ENABLE_CURSOR_POINTER)
       redrawCursorPointerToSpr(updateStartCol * textWidth, updateEndCol * textWidth, tmpSpr, i);
 #endif
-#ifdef DO_PUSHIMAGE_IN_ANOTHERCORE
+#ifdef ENABLE_MULTI_CORE
       mTmpSprXPos[mWriteTmpSpr] = updateStartCol * textWidth;
       mTmpSprYPos[mWriteTmpSpr] = i*textHeight;
       sem_release(&xSemLcdPushWait);
@@ -305,14 +310,18 @@ void tftDispSPI::update1LineText16bppBuffer(int startCol, int endCol, TFT_eSprit
 
 void tftDispSPI::lcdPushProc()
 {
-#ifdef DO_PUSHIMAGE_IN_ANOTHERCORE
+#ifdef ENABLE_MULTI_CORE
   sem_acquire_blocking(&xSemLcdPushWait);
+#ifdef TOUCH_CS
   mutex_enter_blocking(&xSPIMutex);
+#endif
   const int textHeight = sTextHeight[mFontType];
   mTft.startWrite();
   mTft.pushImageDMA(mTmpSprXPos[mReadTmpSpr], mTmpSprYPos[mReadTmpSpr], mTmpSpr[mReadTmpSpr].width(), textHeight, mTmpSprPtr[mReadTmpSpr]);
   mTft.endWrite();
+#ifdef TOUCH_CS
   mutex_exit(&xSPIMutex);
+#endif
   sem_release(&xSemLcdPushMutex);
   mReadTmpSpr ^= 1;
 #endif
