@@ -27,6 +27,8 @@ EscSeqParser::EscSeqParser(edispSDL *disp)
 #if defined(__APPLE__)
 	mIconv = iconv_open("UTF-8", "sjis");
 #endif
+  mEscapeSequence.append("0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789");
+  mEscapeSequence.erase();
 }
 
 EscSeqParser::~EscSeqParser()
