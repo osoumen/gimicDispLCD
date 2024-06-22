@@ -653,60 +653,15 @@ void tftDispSPI::set_attribute( int n1, int n2, int n3, int n4 )
 
 void tftDispSPI::del_to_end()
 {
-  int textHeight = sTextHeight[mFontType];
-  int textWidth = sTextWidth[mFontType];
-  int delSt = sRowChars[mFontType] * mTextPosY + mTextPosX;
-  int delEnd = delSt + sRowChars[mFontType] - mTextPosX;
-  if ((delSt < 0) || (delEnd >= (MAX_LINES*MAX_COLUMNS)) || (mTextPosX >= sRowChars[mFontType])) return;
-
-  int unchanged = 0;
-  int headUnchanged = 0;
-  int tailUnchanged = 0;
-  const ScreenGlyph *ptr = &mScreenChars[delSt];
-  for (int i=mTextPosX; i<sRowChars[mFontType]; ++i) {
-    if (ptr->glyph == 0) {
-      unchanged++;
-    }
-    else {
-      if (unchanged > 0 && unchanged == (i-mTextPosX)) headUnchanged = unchanged;
-      unchanged = 0;
-    }
-    ++ptr;
-  }
-  tailUnchanged = unchanged;
-
-  memset(&mScreenChars[delSt], 0, (sRowChars[mFontType] - mTextPosX) * sizeof(ScreenGlyph));
-  setUpdateArea(mTextPosX + headUnchanged, sRowChars[mFontType] - tailUnchanged, mTextPosY);
-  mReading2ByteCode = false;
+  del(sRowChars[mFontType] - mTextPosX);
 }
 
 void tftDispSPI::del_row()
 {
-  int textHeight = sTextHeight[mFontType];
-  int textWidth = sTextWidth[mFontType];
-  int delSt = sRowChars[mFontType] * mTextPosY;
-  int delEnd = delSt + sRowChars[mFontType];
-  if ((delSt < 0) || (delEnd >= (MAX_LINES*MAX_COLUMNS))) return;
-
-  int unchanged = 0;
-  int headUnchanged = 0;
-  int tailUnchanged = 0;
-  const ScreenGlyph *ptr = &mScreenChars[delSt];
-  for (int i=0; i<sRowChars[mFontType]; ++i) {
-    if (ptr->glyph == 0) {
-      unchanged++;
-    }
-    else {
-      if (unchanged > 0 && unchanged == i) headUnchanged = unchanged;
-      unchanged = 0;
-    }
-    ++ptr;
-  }
-  tailUnchanged = unchanged;
-
-  memset(&mScreenChars[delSt], 0, sRowChars[mFontType] * sizeof(ScreenGlyph));
-  setUpdateArea(headUnchanged, sRowChars[mFontType] - tailUnchanged, mTextPosY);
-  mReading2ByteCode = false;
+  int currentX = mTextPosX;
+  cur_rowtop();
+  del(sRowChars[mFontType]);
+  mTextPosX = currentX;
 }
 
 void tftDispSPI::del(int n)
