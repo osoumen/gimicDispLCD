@@ -670,7 +670,7 @@ void tftDispSPI::del(int n)
   int textWidth = sTextWidth[mFontType];
   int delSt = sRowChars[mFontType] * mTextPosY + mTextPosX;
   int delEnd = delSt + n;
-  if ((delSt < 0) || (delEnd >= (MAX_LINES*MAX_COLUMNS))) return;
+  if ((delSt < 0) || (delEnd >= (MAX_LINES*MAX_COLUMNS)) || (mTextPosX >= sRowChars[mFontType])) return;
 
   int unchanged = 0;
   int headUnchanged = 0;
