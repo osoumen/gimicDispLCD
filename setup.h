@@ -1,6 +1,10 @@
 #ifndef setup_h
 #define setup_h
 
+#define GIMIC_IF_TX     0
+#define GIMIC_IF_RX     1
+#define GIMIC_IF_SDA    2
+#define GIMIC_IF_SCL    3
 #define BUTTON1_PIN_NO  4
 #define BUTTON2_PIN_NO  6
 #define BUTTON3_PIN_NO  7

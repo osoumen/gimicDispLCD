@@ -71,8 +71,8 @@ void doTPCallibration() {
 }
 
 void setup() {
-  Wire1.setSDA(2);
-  Wire1.setSCL(3);
+  Wire1.setSDA(GIMIC_IF_SDA);
+  Wire1.setSCL(GIMIC_IF_SCL);
   Wire1.setClock(400000);
   Wire1.begin(0x20);
   Wire1.onReceive(recv);
@@ -107,7 +107,7 @@ void setup1() {
 #ifdef ENABLE_SERIAL_OUT
   Serial.begin(115200);
 #endif
-  Serial1.setPinout(0, 1);
+  Serial1.setPinout(GIMIC_IF_TX, GIMIC_IF_RX);
   Serial1.setFIFOSize(4096);
   Serial1.begin(115200);
 
