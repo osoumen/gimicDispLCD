@@ -17,6 +17,7 @@ uint32_t lastTpDownTime;
 uint16_t tp_X, tp_Y;
 bool tp_On=false;
 bool backLightOn=false;
+int rotary_move=0;
 
 tftDispSPI tft;
 EscSeqParser parser(&tft);
@@ -94,6 +95,12 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(BUTTON4_PIN_NO), buttonChange4, CHANGE);
   attachInterrupt(digitalPinToInterrupt(BUTTON5_PIN_NO), buttonChange5, CHANGE);
 
+  pinMode(ENC_A_PIN_NO, INPUT_PULLUP);
+  gpio_set_input_hysteresis_enabled(ENC_A_PIN_NO, true);
+  pinMode(ENC_B_PIN_NO, INPUT_PULLUP);
+  gpio_set_input_hysteresis_enabled(ENC_B_PIN_NO, true);
+  attachInterrupt(digitalPinToInterrupt(ENC_A_PIN_NO), rotary_enc_a, FALLING);
+
 #ifdef LED_BUILTIN
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, LOW);
@@ -146,6 +153,12 @@ void loop1() {
     }
   }
 #endif
+
+  if (rotary_move != 0) {
+    if (rotary_move > 0) Serial1.write("\x1b@995y");  // KEY_MOUSEWHEEL_UP
+    else Serial1.write("\x1b@996y");  // KEY_MOUSEWHEEL_DOWN
+    rotary_move = 0;
+  }
 
   if (Serial1.overflow()) {
     Serial1.flush();
@@ -238,6 +251,40 @@ void buttonChange5() {
     pinInput |= 1 << 7;
   }
   button_input = pinInput;
+}
+
+void rotary_enc_a() {
+  detachInterrupt(digitalPinToInterrupt(ENC_A_PIN_NO));
+  PinStatus b_level = digitalRead(ENC_B_PIN_NO);
+  if (digitalRead(ENC_A_PIN_NO) == LOW) {
+    rotary_move += b_level ? -1 : 1;
+  }
+  else {
+    rotary_move += b_level ? 1 : -1;
+  }
+  if (b_level == LOW) {
+    attachInterrupt(digitalPinToInterrupt(ENC_B_PIN_NO), rotary_enc_b, RISING);
+  }
+  else {
+    attachInterrupt(digitalPinToInterrupt(ENC_B_PIN_NO), rotary_enc_b, FALLING);
+  }
+}
+
+void rotary_enc_b() {
+  detachInterrupt(digitalPinToInterrupt(ENC_B_PIN_NO));
+  PinStatus a_level = digitalRead(ENC_A_PIN_NO);
+  if (digitalRead(ENC_B_PIN_NO) == LOW) {
+    rotary_move += a_level ? 1 : -1;
+  }
+  else {
+    rotary_move += a_level ? -1 : 1;
+  }
+  if (a_level == LOW) {
+    attachInterrupt(digitalPinToInterrupt(ENC_A_PIN_NO), rotary_enc_a, RISING);
+  }
+  else {
+    attachInterrupt(digitalPinToInterrupt(ENC_A_PIN_NO), rotary_enc_a, FALLING);
+  }
 }
 
 void recv(int len) {

@@ -10,6 +10,8 @@
 #define BUTTON3_PIN_NO  7
 #define BUTTON4_PIN_NO  14
 #define BUTTON5_PIN_NO  26
+#define ENC_A_PIN_NO    27
+#define ENC_B_PIN_NO    28
 
 // #define ENABLE_SERIAL_OUT 1
 #define TOUCH_THRESHOLD 300
