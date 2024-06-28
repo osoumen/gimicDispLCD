@@ -1,26 +1,36 @@
 #include "setup.h"
 
-#include "tftDispSPI.h"
 #include "EscSeqParser.h"
+#include "tftDispSPI.h"
+#include "hid_host.h"
+#include "Adafruit_TinyUSB.h"
 #include <Wire.h>
 #include <EEPROM.h>
 
-void recv(int len);
-void req();
+static_assert( CFG_TUH_ENUMERATION_BUFSIZE > 499 );
 
 uint8_t button_input=0;
+uint8_t joypad_input=0;
+uint8_t arrowkey_hold_time[4] = {0};
 uint8_t button_ipol=0;
 volatile bool i2c_reading;
 uint8_t i2c_reading_address;
-uint32_t tpUpdateTime;
+uint32_t prev_joypad=0;
+uint32_t inputUpdateTime;
 uint32_t lastTpDownTime;
 uint16_t tp_X, tp_Y;
 bool tp_On=false;
+uint16_t mouse_X, mouse_Y;
+uint32_t mouse_buttons=0;
 bool backLightOn=false;
 int rotary_move=0;
 
+Adafruit_USBH_Host USBHost;
 tftDispSPI tft;
 EscSeqParser parser(&tft);
+
+void recv(int len);
+void req();
 
 enum MouseButtons {
 	MOUSE_BTN1			= (1 << 0),
@@ -114,6 +124,8 @@ void setup1() {
 #ifdef ENABLE_SERIAL_OUT
   Serial.begin(115200);
 #endif
+  USBHost.begin(0);
+
   Serial1.setPinout(GIMIC_IF_TX, GIMIC_IF_RX);
   Serial1.setFIFOSize(4096);
   Serial1.begin(115200);
@@ -137,6 +149,9 @@ void loop1() {
 #endif
   uint32_t updateStartTime = millis();
   bool draw = false;
+
+  USBHost.task();
+  
   while (Serial1.available() > 0) {
     parser.ParseByte(Serial1.read());
     draw = true;
@@ -145,14 +160,17 @@ void loop1() {
   //   parser.ParseByte(Serial.read());
   // }
 
+  if ((millis() - inputUpdateTime) > 10) {
+    inputUpdateTime = millis();
 #ifdef TOUCH_CS
-  if ((millis() - tpUpdateTime) > 10) {
-    tpUpdateTime = millis();
     if (backLightOn) {
       draw = TouchPanelTask(draw);
     }
-  }
 #endif
+    draw = MouseTask(draw);
+    JoypadTask();
+    KeyboardTask();
+  }
 
   if (rotary_move != 0) {
     if (rotary_move > 0) Serial1.write("\x1b@995y");  // KEY_MOUSEWHEEL_UP
@@ -173,6 +191,229 @@ void loop1() {
     Serial.println(millis() - updateStartTime);
 #endif
   }
+}
+
+void KeyboardTask()
+{
+  uint8_t key = 0;
+  while (getKeyboardKey(&key)) {
+    if (key >= KEY_CURSOR_UP) {
+      uint8_t cmd[] = {0x1b, '[', 'A'};
+      switch (key) {
+        case KEY_CURSOR_UP:
+          cmd[2] = 'A';
+      		Serial1.write(cmd, 3);
+          break;
+		    case KEY_CURSOR_DOWN:
+          cmd[2] = 'B';
+      		Serial1.write(cmd, 3);
+          break;
+		    case KEY_CURSOR_LEFT:
+          cmd[2] = 'D';
+      		Serial1.write(cmd, 3);
+          break;
+		    case KEY_CURSOR_RIGHT:
+          cmd[2] = 'C';
+      		Serial1.write(cmd, 3);
+          break;
+		    // case KEY_RET:
+        //   break;
+		    case KEY_BS:
+          Serial1.write(0x08); // BS
+          break;
+		    case KEY_HOME:
+          cmd[2] = '1';
+  		    Serial1.write(cmd, 3);
+          break;
+		    case KEY_END:
+          cmd[2] = '4';
+		      Serial1.write(cmd, 3);
+          break;
+		    case KEY_PAGE_UP:
+          cmd[2] = '5';
+		      Serial1.write(cmd, 3);
+          break;
+		    case KEY_PAGE_DOWN:
+          cmd[2] = '6';
+		      Serial1.write(cmd, 3);
+          break;
+		    case KEY_FUNC_F1:
+          cmd[1] = 'O';
+          cmd[2] = 'P';
+          Serial1.write(cmd, 3);
+          break;
+		    case KEY_FUNC_F2:
+          cmd[1] = 'O';
+          cmd[2] = 'Q';
+          Serial1.write(cmd, 3);
+          break;
+		    case KEY_FUNC_F3:
+          cmd[1] = 'O';
+          cmd[2] = 'R';
+          Serial1.write(cmd, 3);
+          break;
+		    case KEY_FUNC_F4:
+          cmd[1] = 'O';
+          cmd[2] = 'S';
+          Serial1.write(cmd, 3);
+          break;
+		    case KEY_FUNC_F5:
+          cmd[1] = 'O';
+          cmd[2] = 'T';
+          Serial1.write(cmd, 3);
+          break;
+		    case KEY_FUNC_F6:
+          cmd[1] = 'O';
+          cmd[2] = 'U';
+          Serial1.write(cmd, 3);
+          break;
+		    case KEY_FUNC_F7:
+          cmd[1] = 'O';
+          cmd[2] = 'V';
+          Serial1.write(cmd, 3);
+          break;
+		    case KEY_FUNC_F8:
+          cmd[1] = 'O';
+          cmd[2] = 'W';
+          Serial1.write(cmd, 3);
+          break;
+		    case KEY_FUNC_F9:
+          cmd[1] = 'O';
+          cmd[2] = 'X';
+          Serial1.write(cmd, 3);
+          break;
+		    case KEY_FUNC_F10:
+          cmd[1] = 'O';
+          cmd[2] = 'Y';
+          Serial1.write(cmd, 3);
+          break;
+		    // case KEY_FUNC_F11:
+        //   break;
+		    // case KEY_FUNC_F12:
+        //   break;
+      }
+    }
+    else {
+      Serial1.write(key);
+    }
+  }
+}
+
+void JoypadTask()
+{
+  const uint32_t press = getJoypadButtons();
+  const uint32_t change = press ^ prev_joypad;
+  const uint32_t up = change & prev_joypad;
+  const uint32_t down = change & press;
+  prev_joypad = press;
+  uint32_t btn_state = 0;
+  uint8_t arrow_key_bit = 1 << 3;
+  uint8_t cmd[] = {0x1b, '[', 'A'};
+  const uint8_t cmd_end[] = {'D', 'A', 'B', 'C'};
+
+  for (int i=0; i<4; ++i) {
+    if (up & arrow_key_bit) {
+      arrowkey_hold_time[i] = 0;
+    }
+    if (down & arrow_key_bit) {
+      cmd[2] = cmd_end[i];
+      Serial1.write(cmd,3);
+    }
+    if (press & arrow_key_bit) {
+      arrowkey_hold_time[i]++;
+      if (arrowkey_hold_time[i] > 25) {   // TODO: 定数化
+        if (((arrowkey_hold_time[i] - 25) % 2) == 0) {
+          cmd[2] = cmd_end[i];
+          Serial1.write(cmd,3);
+				}
+      }
+    }
+    arrow_key_bit <<= 1;
+  }
+
+  if (press & (1 << (BTN4_JOYPAD_BTN+6))) {
+    btn_state |= 1 << 6;
+  }
+  if (down & (1 << (BS_JOYPAD_BTN+6))) {
+    Serial1.write(0x08);  // BS
+  }
+  if (press & (1 << (BTN5_JOYPAD_BTN+6))) {
+    btn_state |= 1 << 7;
+  }
+  if (down & (1 << (ENTER_JOYPAD_BTN+6))) {
+    Serial1.write('\r');
+  }
+  if (down & (1 << (PAGE_UP_JOYPAD_BTN+6))) {
+    cmd[2] = '5';
+		Serial1.write(cmd, 3);
+  }
+  if (down & (1 << (PAGE_DOWN_JOYPAD_BTN+6))) {
+    cmd[2] = '6';
+		Serial1.write(cmd, 3);
+  }
+  if (down & (1 << (MONITOR_MODE_JOYPAD_BTN+6))) {
+    cmd[1] = 'O';
+		cmd[2] = 'P';
+		Serial1.write(cmd, 3);
+  }
+  if (down & (1 << (STOP_JOYPAD_BTN+6))) {
+    cmd[1] = 'O';
+		cmd[2] = 'Q';
+		Serial1.write(cmd, 3);
+  }
+  joypad_input = btn_state;
+}
+
+bool MouseTask(bool draw)
+{
+  int x,y,wheel;
+  const uint32_t press = getMouseMove(&x, &y, &wheel);
+  const uint32_t change = press ^ mouse_buttons;
+  const uint32_t up = change & mouse_buttons;
+  const uint32_t down = change & press;
+  clearMouseMove();
+  mouse_buttons = press;
+
+  int btnState = 0;
+  if (up & 1) {
+    Serial1.printf("\x1b[<%d;%d;%dM", MOUSE_BTN1_REL | IS_TP, mouse_X, mouse_Y);
+    draw = true;
+  }
+  if (down & 1) {
+    btnState |= MOUSE_BTN1;
+    if ((millis() - lastTpDownTime) < 500) {   // TODO: ダブルタップ時間を調整
+      if ((x * x + y * y) < 16*16) {
+        btnState |= MOUSE_BTN_DBL_CLK;
+      }
+    }
+    lastTpDownTime = millis();
+  }
+  if (down & 2) {
+    btnState |= MOUSE_BTN2;
+  }
+  if ((x != 0) || (y != 0) || (btnState != 0)) {
+    x += mouse_X;
+    if (x < 0) x = 0;
+    if (x >= 320) x = 320 - 1;
+    y += mouse_Y;
+    if (y < 0) y = 0;
+    if (y >= 240) y = 240 - 1;
+    if (press) {
+      Serial1.printf("\x1b[<%d;%d;%dM", btnState | IS_TP, x, y);
+    }
+    mouse_X = x;
+    mouse_Y = y;
+    tft.setCursorPointer(x, y);
+    draw = true;
+  }
+  // wheelの処理
+  if (wheel > 0) {
+    Serial1.write("\x1b@995y");  // KEY_MOUSEWHEEL_UP
+  }
+  if (wheel < 0) {
+    Serial1.write("\x1b@996y");  // KEY_MOUSEWHEEL_DOWN
+  }
+  return draw;
 }
 
 bool TouchPanelTask(bool draw)
@@ -207,7 +448,7 @@ bool TouchPanelTask(bool draw)
       tp_X = x;
       tp_Y = y;
     }
-    tft.setCursorPointer(x, y);
+    // tft.setCursorPointer(x, y);
     draw = true;
   }
   return draw;
@@ -319,7 +560,7 @@ void req() {
   if (i2c_reading) {
     i2c_reading = false;
     if (i2c_reading_address == 0x09) {
-      Wire1.write(button_input);
+      Wire1.write(button_input | joypad_input);
     }
     else {
       Wire1.write(0);
