@@ -1,10 +1,15 @@
 #ifndef setup_h
 #define setup_h
 
-#define GIMIC_IF_TX     0
-#define GIMIC_IF_RX     1
-#define GIMIC_IF_SDA    2
-#define GIMIC_IF_SCL    3
+// UART, I2Cのポート指定(必須)
+#define TO_GIMIC_SERIAL Serial1
+#define TO_GIMIC_I2C    Wire1
+#define GIMIC_IF_TX_PIN     0
+#define GIMIC_IF_RX_PIN     1
+#define GIMIC_IF_SDA_PIN    2
+#define GIMIC_IF_SCL_PIN    3
+
+// 使用しないピンはundefする事でピンを空ける事ができます
 #define BUTTON1_PIN_NO  4
 #define BUTTON2_PIN_NO  6
 #define BUTTON3_PIN_NO  7
@@ -30,7 +35,9 @@
 // START btn
 #define STOP_JOYPAD_BTN 8
 
-// #define ENABLE_SERIAL_OUT 1
+#define ARROW_KEY_REPEAT_DELAY  25
+#define ARROW_KEY_REPEAT_RATE  2
+
 #define TOUCH_THRESHOLD 300
 // #define UART_MAX_BAUD_RATE  115200
 // #define UART_MAX_BAUD_RATE  230400

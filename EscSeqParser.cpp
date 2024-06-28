@@ -443,31 +443,31 @@ void EscSeqParser::ParseEscapeSequence(const std::string &seq)
                   break;
 #if defined(ARDUINO)
 								case 15:
-									if (Serial1) {
-                    Serial1.flush();
-                    Serial1.end();
-                    Serial1.begin(115200);
+									if (TO_GIMIC_SERIAL) {
+                    TO_GIMIC_SERIAL.flush();
+                    TO_GIMIC_SERIAL.end();
+                    TO_GIMIC_SERIAL.begin(115200);
                   }
 									break;
                 case 16:
-									if (Serial1) {
-                    Serial1.flush();
-                    Serial1.end();
-                    Serial1.begin(230400);
+									if (TO_GIMIC_SERIAL) {
+                    TO_GIMIC_SERIAL.flush();
+                    TO_GIMIC_SERIAL.end();
+                    TO_GIMIC_SERIAL.begin(230400);
                   }
 									break;
                 case 17:
-									if (Serial1) {
-                    Serial1.flush();
-                    Serial1.end();
-                    Serial1.begin(460800);
+									if (TO_GIMIC_SERIAL) {
+                    TO_GIMIC_SERIAL.flush();
+                    TO_GIMIC_SERIAL.end();
+                    TO_GIMIC_SERIAL.begin(460800);
                   }
 									break;
                 case 18:
-									if (Serial1) {
-                    Serial1.flush();
-                    Serial1.end();
-                    Serial1.begin(921600);
+									if (TO_GIMIC_SERIAL) {
+                    TO_GIMIC_SERIAL.flush();
+                    TO_GIMIC_SERIAL.end();
+                    TO_GIMIC_SERIAL.begin(921600);
                   }
 									break;
 #endif
@@ -598,7 +598,7 @@ void EscSeqParser::ParseEscapeSequence(const std::string &seq)
             int param;
 						if (ExtractParamString(param_str, &param, 1) == 1) {
               if (param == 900) {
-                Serial1.printf("\x1b@%dx", UART_MAX_BAUD_RATE);
+                TO_GIMIC_SERIAL.printf("\x1b@%dx", UART_MAX_BAUD_RATE);
               }
             }
           }

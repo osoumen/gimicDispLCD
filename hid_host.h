@@ -6,7 +6,7 @@ enum Keys {
 		KEY_CURSOR_DOWN,
 		KEY_CURSOR_LEFT,
 		KEY_CURSOR_RIGHT,
-		KEY_RET,
+		// KEY_RET,
 		KEY_BS,
 		KEY_HOME,
 		KEY_END,

@@ -7,6 +7,8 @@
 #include <Wire.h>
 #include <EEPROM.h>
 
+// #define ENABLE_SERIAL_OUT 1
+
 static_assert( CFG_TUH_ENUMERATION_BUFSIZE > 499 );
 
 uint8_t button_input=0;
@@ -82,34 +84,45 @@ void doTPCallibration() {
 }
 
 void setup() {
-  Wire1.setSDA(GIMIC_IF_SDA);
-  Wire1.setSCL(GIMIC_IF_SCL);
-  Wire1.setClock(400000);
-  Wire1.begin(0x20);
-  Wire1.onReceive(recv);
-  Wire1.onRequest(req);
+  TO_GIMIC_I2C.setSDA(GIMIC_IF_SDA_PIN);
+  TO_GIMIC_I2C.setSCL(GIMIC_IF_SCL_PIN);
+  TO_GIMIC_I2C.setClock(400000);
+  TO_GIMIC_I2C.begin(0x20);
+  TO_GIMIC_I2C.onReceive(recv);
+  TO_GIMIC_I2C.onRequest(req);
   
+#ifdef BUTTON1_PIN_NO
   pinMode(BUTTON1_PIN_NO, INPUT_PULLUP);
   gpio_set_input_hysteresis_enabled (BUTTON1_PIN_NO, true);
+  attachInterrupt(digitalPinToInterrupt(BUTTON1_PIN_NO), buttonChange1, CHANGE);
+#endif
+#ifdef BUTTON2_PIN_NO
   pinMode(BUTTON2_PIN_NO, INPUT_PULLUP);
   gpio_set_input_hysteresis_enabled (BUTTON2_PIN_NO, true);
+  attachInterrupt(digitalPinToInterrupt(BUTTON2_PIN_NO), buttonChange2, CHANGE);
+#endif
+#ifdef BUTTON3_PIN_NO
   pinMode(BUTTON3_PIN_NO, INPUT_PULLUP);
   gpio_set_input_hysteresis_enabled (BUTTON3_PIN_NO, true);
+  attachInterrupt(digitalPinToInterrupt(BUTTON3_PIN_NO), buttonChange3, CHANGE);
+#endif
+#ifdef BUTTON4_PIN_NO
   pinMode(BUTTON4_PIN_NO, INPUT_PULLUP);
   gpio_set_input_hysteresis_enabled (BUTTON4_PIN_NO, true);
+  attachInterrupt(digitalPinToInterrupt(BUTTON4_PIN_NO), buttonChange4, CHANGE);
+#endif
+#ifdef BUTTON5_PIN_NO
   pinMode(BUTTON5_PIN_NO, INPUT_PULLUP);
   gpio_set_input_hysteresis_enabled (BUTTON5_PIN_NO, true);
-  attachInterrupt(digitalPinToInterrupt(BUTTON1_PIN_NO), buttonChange1, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(BUTTON2_PIN_NO), buttonChange2, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(BUTTON3_PIN_NO), buttonChange3, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(BUTTON4_PIN_NO), buttonChange4, CHANGE);
   attachInterrupt(digitalPinToInterrupt(BUTTON5_PIN_NO), buttonChange5, CHANGE);
-
+#endif
+#if defined(ENC_A_PIN_NO) && defined(ENC_B_PIN_NO)
   pinMode(ENC_A_PIN_NO, INPUT_PULLUP);
   gpio_set_input_hysteresis_enabled(ENC_A_PIN_NO, true);
   pinMode(ENC_B_PIN_NO, INPUT_PULLUP);
   gpio_set_input_hysteresis_enabled(ENC_B_PIN_NO, true);
   attachInterrupt(digitalPinToInterrupt(ENC_A_PIN_NO), rotary_enc_a, FALLING);
+#endif
 
 #ifdef LED_BUILTIN
   pinMode(LED_BUILTIN, OUTPUT);
@@ -126,9 +139,9 @@ void setup1() {
 #endif
   USBHost.begin(0);
 
-  Serial1.setPinout(GIMIC_IF_TX, GIMIC_IF_RX);
-  Serial1.setFIFOSize(4096);
-  Serial1.begin(115200);
+  TO_GIMIC_SERIAL.setPinout(GIMIC_IF_TX_PIN, GIMIC_IF_RX_PIN);
+  TO_GIMIC_SERIAL.setFIFOSize(4096);
+  TO_GIMIC_SERIAL.begin(115200);
 
   tft.init();
 
@@ -152,8 +165,8 @@ void loop1() {
 
   USBHost.task();
   
-  while (Serial1.available() > 0) {
-    parser.ParseByte(Serial1.read());
+  while (TO_GIMIC_SERIAL.available() > 0) {
+    parser.ParseByte(TO_GIMIC_SERIAL.read());
     draw = true;
   }
   // while (Serial.available() > 0) {
@@ -162,24 +175,24 @@ void loop1() {
 
   if ((millis() - inputUpdateTime) > 10) {
     inputUpdateTime = millis();
-#ifdef TOUCH_CS
     if (backLightOn) {
+#ifdef TOUCH_CS
       draw = TouchPanelTask(draw);
-    }
 #endif
-    draw = MouseTask(draw);
-    JoypadTask();
-    KeyboardTask();
+      draw = MouseTask(draw);
+      JoypadTask();
+      KeyboardTask();
+    }
   }
 
   if (rotary_move != 0) {
-    if (rotary_move > 0) Serial1.write("\x1b@995y");  // KEY_MOUSEWHEEL_UP
-    else Serial1.write("\x1b@996y");  // KEY_MOUSEWHEEL_DOWN
+    if (rotary_move > 0) TO_GIMIC_SERIAL.write("\x1b@995y");  // KEY_MOUSEWHEEL_UP
+    else TO_GIMIC_SERIAL.write("\x1b@996y");  // KEY_MOUSEWHEEL_DOWN
     rotary_move = 0;
   }
 
-  if (Serial1.overflow()) {
-    Serial1.flush();
+  if (TO_GIMIC_SERIAL.overflow()) {
+    TO_GIMIC_SERIAL.flush();
     tft.move(0,0);
     tft.set_attribute(17);
     tft.puts_("!!Overflowed!!");
@@ -202,90 +215,90 @@ void KeyboardTask()
       switch (key) {
         case KEY_CURSOR_UP:
           cmd[2] = 'A';
-      		Serial1.write(cmd, 3);
+      		TO_GIMIC_SERIAL.write(cmd, 3);
           break;
 		    case KEY_CURSOR_DOWN:
           cmd[2] = 'B';
-      		Serial1.write(cmd, 3);
+      		TO_GIMIC_SERIAL.write(cmd, 3);
           break;
 		    case KEY_CURSOR_LEFT:
           cmd[2] = 'D';
-      		Serial1.write(cmd, 3);
+      		TO_GIMIC_SERIAL.write(cmd, 3);
           break;
 		    case KEY_CURSOR_RIGHT:
           cmd[2] = 'C';
-      		Serial1.write(cmd, 3);
+      		TO_GIMIC_SERIAL.write(cmd, 3);
           break;
 		    // case KEY_RET:
         //   break;
 		    case KEY_BS:
-          Serial1.write(0x08); // BS
+          TO_GIMIC_SERIAL.write(0x08); // BS
           break;
 		    case KEY_HOME:
           cmd[2] = '1';
-  		    Serial1.write(cmd, 3);
+  		    TO_GIMIC_SERIAL.write(cmd, 3);
           break;
 		    case KEY_END:
           cmd[2] = '4';
-		      Serial1.write(cmd, 3);
+		      TO_GIMIC_SERIAL.write(cmd, 3);
           break;
 		    case KEY_PAGE_UP:
           cmd[2] = '5';
-		      Serial1.write(cmd, 3);
+		      TO_GIMIC_SERIAL.write(cmd, 3);
           break;
 		    case KEY_PAGE_DOWN:
           cmd[2] = '6';
-		      Serial1.write(cmd, 3);
+		      TO_GIMIC_SERIAL.write(cmd, 3);
           break;
 		    case KEY_FUNC_F1:
           cmd[1] = 'O';
           cmd[2] = 'P';
-          Serial1.write(cmd, 3);
+          TO_GIMIC_SERIAL.write(cmd, 3);
           break;
 		    case KEY_FUNC_F2:
           cmd[1] = 'O';
           cmd[2] = 'Q';
-          Serial1.write(cmd, 3);
+          TO_GIMIC_SERIAL.write(cmd, 3);
           break;
 		    case KEY_FUNC_F3:
           cmd[1] = 'O';
           cmd[2] = 'R';
-          Serial1.write(cmd, 3);
+          TO_GIMIC_SERIAL.write(cmd, 3);
           break;
 		    case KEY_FUNC_F4:
           cmd[1] = 'O';
           cmd[2] = 'S';
-          Serial1.write(cmd, 3);
+          TO_GIMIC_SERIAL.write(cmd, 3);
           break;
 		    case KEY_FUNC_F5:
           cmd[1] = 'O';
           cmd[2] = 'T';
-          Serial1.write(cmd, 3);
+          TO_GIMIC_SERIAL.write(cmd, 3);
           break;
 		    case KEY_FUNC_F6:
           cmd[1] = 'O';
           cmd[2] = 'U';
-          Serial1.write(cmd, 3);
+          TO_GIMIC_SERIAL.write(cmd, 3);
           break;
 		    case KEY_FUNC_F7:
           cmd[1] = 'O';
           cmd[2] = 'V';
-          Serial1.write(cmd, 3);
+          TO_GIMIC_SERIAL.write(cmd, 3);
           break;
 		    case KEY_FUNC_F8:
           cmd[1] = 'O';
           cmd[2] = 'W';
-          Serial1.write(cmd, 3);
+          TO_GIMIC_SERIAL.write(cmd, 3);
           break;
 		    case KEY_FUNC_F9:
           cmd[1] = 'O';
           cmd[2] = 'X';
-          Serial1.write(cmd, 3);
+          TO_GIMIC_SERIAL.write(cmd, 3);
           break;
 		    case KEY_FUNC_F10:
           cmd[1] = 'O';
           cmd[2] = 'Y';
-          Serial1.write(cmd, 3);
+          TO_GIMIC_SERIAL.write(cmd, 3);
           break;
 		    // case KEY_FUNC_F11:
         //   break;
@@ -294,7 +307,7 @@ void KeyboardTask()
       }
     }
     else {
-      Serial1.write(key);
+      TO_GIMIC_SERIAL.write(key);
     }
   }
 }
@@ -317,14 +330,14 @@ void JoypadTask()
     }
     if (down & arrow_key_bit) {
       cmd[2] = cmd_end[i];
-      Serial1.write(cmd,3);
+      TO_GIMIC_SERIAL.write(cmd,3);
     }
     if (press & arrow_key_bit) {
       arrowkey_hold_time[i]++;
-      if (arrowkey_hold_time[i] > 25) {   // TODO: 定数化
-        if (((arrowkey_hold_time[i] - 25) % 2) == 0) {
+      if (arrowkey_hold_time[i] > ARROW_KEY_REPEAT_DELAY) {
+        if (((arrowkey_hold_time[i] - ARROW_KEY_REPEAT_DELAY) % ARROW_KEY_REPEAT_RATE) == 0) {
           cmd[2] = cmd_end[i];
-          Serial1.write(cmd,3);
+          TO_GIMIC_SERIAL.write(cmd,3);
 				}
       }
     }
@@ -335,31 +348,31 @@ void JoypadTask()
     btn_state |= 1 << 6;
   }
   if (down & (1 << (BS_JOYPAD_BTN+6))) {
-    Serial1.write(0x08);  // BS
+    TO_GIMIC_SERIAL.write(0x08);  // BS
   }
   if (press & (1 << (BTN5_JOYPAD_BTN+6))) {
     btn_state |= 1 << 7;
   }
   if (down & (1 << (ENTER_JOYPAD_BTN+6))) {
-    Serial1.write('\r');
+    TO_GIMIC_SERIAL.write('\r');
   }
   if (down & (1 << (PAGE_UP_JOYPAD_BTN+6))) {
     cmd[2] = '5';
-		Serial1.write(cmd, 3);
+		TO_GIMIC_SERIAL.write(cmd, 3);
   }
   if (down & (1 << (PAGE_DOWN_JOYPAD_BTN+6))) {
     cmd[2] = '6';
-		Serial1.write(cmd, 3);
+		TO_GIMIC_SERIAL.write(cmd, 3);
   }
   if (down & (1 << (MONITOR_MODE_JOYPAD_BTN+6))) {
     cmd[1] = 'O';
 		cmd[2] = 'P';
-		Serial1.write(cmd, 3);
+		TO_GIMIC_SERIAL.write(cmd, 3);
   }
   if (down & (1 << (STOP_JOYPAD_BTN+6))) {
     cmd[1] = 'O';
 		cmd[2] = 'Q';
-		Serial1.write(cmd, 3);
+		TO_GIMIC_SERIAL.write(cmd, 3);
   }
   joypad_input = btn_state;
 }
@@ -376,7 +389,7 @@ bool MouseTask(bool draw)
 
   int btnState = 0;
   if (up & 1) {
-    Serial1.printf("\x1b[<%d;%d;%dM", MOUSE_BTN1_REL | IS_TP, mouse_X, mouse_Y);
+    TO_GIMIC_SERIAL.printf("\x1b[<%d;%d;%dM", MOUSE_BTN1_REL | IS_TP, mouse_X, mouse_Y);
     draw = true;
   }
   if (down & 1) {
@@ -399,7 +412,7 @@ bool MouseTask(bool draw)
     if (y < 0) y = 0;
     if (y >= 240) y = 240 - 1;
     if (press) {
-      Serial1.printf("\x1b[<%d;%d;%dM", btnState | IS_TP, x, y);
+      TO_GIMIC_SERIAL.printf("\x1b[<%d;%d;%dM", btnState | IS_TP, x, y);
     }
     mouse_X = x;
     mouse_Y = y;
@@ -408,10 +421,10 @@ bool MouseTask(bool draw)
   }
   // wheelの処理
   if (wheel > 0) {
-    Serial1.write("\x1b@995y");  // KEY_MOUSEWHEEL_UP
+    TO_GIMIC_SERIAL.write("\x1b@995y");  // KEY_MOUSEWHEEL_UP
   }
   if (wheel < 0) {
-    Serial1.write("\x1b@996y");  // KEY_MOUSEWHEEL_DOWN
+    TO_GIMIC_SERIAL.write("\x1b@996y");  // KEY_MOUSEWHEEL_DOWN
   }
   return draw;
 }
@@ -421,7 +434,7 @@ bool TouchPanelTask(bool draw)
   uint16_t x,y;
   bool isOn = tft.getTouch(&x, &y, TOUCH_THRESHOLD);
   if (isOn == false && tp_On == true) {
-    Serial1.printf("\x1b[<%d;%d;%dM", MOUSE_BTN1_REL | IS_TP, tp_X, tp_Y);
+    TO_GIMIC_SERIAL.printf("\x1b[<%d;%d;%dM", MOUSE_BTN1_REL | IS_TP, tp_X, tp_Y);
     // Serial.printf("\x1b[<%d;%d;%dM\n", MOUSE_BTN1_REL | IS_TP, tp_X, tp_Y);
     tp_On = false;
     tft.hideCursorPointer();
@@ -443,7 +456,7 @@ bool TouchPanelTask(bool draw)
       lastTpDownTime = millis();
     }
     if ((x != tp_X) || (y != tp_Y)) {
-      Serial1.printf("\x1b[<%d;%d;%dM", btnState, x, y);
+      TO_GIMIC_SERIAL.printf("\x1b[<%d;%d;%dM", btnState, x, y);
       // Serial.printf("\x1b[<%d;%d;%dM\n", btnState, x, y);
       tp_X = x;
       tp_Y = y;
@@ -454,6 +467,7 @@ bool TouchPanelTask(bool draw)
   return draw;
 }
 
+#ifdef BUTTON1_PIN_NO
 void buttonChange1() {
   int pinInput = button_input & ~(1 << 3);
   if (digitalRead(BUTTON1_PIN_NO) == LOW) {
@@ -461,7 +475,9 @@ void buttonChange1() {
   }
   button_input = pinInput;
 }
+#endif
 
+#ifdef BUTTON2_PIN_NO
 void buttonChange2() {
   int pinInput = button_input & ~(1 << 4);
   if (digitalRead(BUTTON2_PIN_NO) == LOW) {
@@ -469,7 +485,9 @@ void buttonChange2() {
   }
   button_input = pinInput;
 }
+#endif
 
+#ifdef BUTTON3_PIN_NO
 void buttonChange3() {
   int pinInput = button_input & ~(1 << 5);
   if (digitalRead(BUTTON3_PIN_NO) == LOW) {
@@ -477,7 +495,9 @@ void buttonChange3() {
   }
   button_input = pinInput;
 }
+#endif
 
+#ifdef BUTTON4_PIN_NO
 void buttonChange4() {
   int pinInput = button_input & ~(1 << 6);
   if (digitalRead(BUTTON4_PIN_NO) == LOW) {
@@ -485,7 +505,9 @@ void buttonChange4() {
   }
   button_input = pinInput;
 }
+#endif
 
+#ifdef BUTTON5_PIN_NO
 void buttonChange5() {
   int pinInput = button_input & ~(1 << 7);
   if (digitalRead(BUTTON5_PIN_NO) == LOW) {
@@ -493,7 +515,9 @@ void buttonChange5() {
   }
   button_input = pinInput;
 }
+#endif
 
+#if defined(ENC_A_PIN_NO) && defined(ENC_B_PIN_NO)
 void rotary_enc_a() {
   detachInterrupt(digitalPinToInterrupt(ENC_A_PIN_NO));
   PinStatus b_level = digitalRead(ENC_B_PIN_NO);
@@ -527,15 +551,16 @@ void rotary_enc_b() {
     attachInterrupt(digitalPinToInterrupt(ENC_A_PIN_NO), rotary_enc_a, FALLING);
   }
 }
+#endif
 
 void recv(int len) {
   if (len == 1) {
     i2c_reading = true;
-    i2c_reading_address = (uint8_t)Wire1.read();
+    i2c_reading_address = (uint8_t)TO_GIMIC_I2C.read();
   }
   else if (len == 2) {
-    uint8_t address = (uint8_t)Wire1.read();
-    uint8_t data = Wire1.read();
+    uint8_t address = (uint8_t)TO_GIMIC_I2C.read();
+    uint8_t data = TO_GIMIC_I2C.read();
     if (address == 0x01) {
       button_ipol = data; // 読み取るだけ
     }
@@ -560,13 +585,13 @@ void req() {
   if (i2c_reading) {
     i2c_reading = false;
     if (i2c_reading_address == 0x09) {
-      Wire1.write(button_input | joypad_input);
+      TO_GIMIC_I2C.write(button_input | joypad_input);
     }
     else {
-      Wire1.write(0);
+      TO_GIMIC_I2C.write(0);
     }
   }
   else {
-    Wire1.write(0);
+    TO_GIMIC_I2C.write(0);
   }
 }
