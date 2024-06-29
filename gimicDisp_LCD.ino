@@ -24,7 +24,13 @@ bool tp_On=false;
 uint16_t mouse_X, mouse_Y;
 uint32_t mouse_buttons=0;
 bool backLightOn=false;
-int rotary_move=0;
+volatile int rotary_move=0;
+// const int enc_cw_pat[] = {1, 3, 0, 2};
+// const int enc_ccw_pat[] = {2, 0, 3, 1};
+const int enc_cw_pat[] = {1, 1, 0, 0};
+const int enc_ccw_pat[] = {2, 0, 2, 0};
+volatile int current_rotary=0;
+volatile int previous_rotary=0;
 int to_hide_cursor=0;
 
 Adafruit_USBH_Host USBHost;
@@ -127,7 +133,8 @@ void setup() {
   gpio_set_input_hysteresis_enabled(ENC_A_PIN_NO, true);
   pinMode(ENC_B_PIN_NO, INPUT_PULLUP);
   gpio_set_input_hysteresis_enabled(ENC_B_PIN_NO, true);
-  attachInterrupt(digitalPinToInterrupt(ENC_A_PIN_NO), rotary_enc_a, FALLING);
+  attachInterrupt(digitalPinToInterrupt(ENC_A_PIN_NO), rotary_enc, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(ENC_B_PIN_NO), rotary_enc, CHANGE);
 #endif
 
 #ifdef LED_BUILTIN
@@ -569,38 +576,13 @@ void buttonChange5() {
 #endif
 
 #if defined(ENC_A_PIN_NO) && defined(ENC_B_PIN_NO)
-void rotary_enc_a() {
-  detachInterrupt(digitalPinToInterrupt(ENC_A_PIN_NO));
-  PinStatus b_level = digitalRead(ENC_B_PIN_NO);
-  if (digitalRead(ENC_A_PIN_NO) == LOW) {
-    rotary_move += b_level ? -1 : 1;
-  }
-  else {
-    rotary_move += b_level ? 1 : -1;
-  }
-  if (b_level == LOW) {
-    attachInterrupt(digitalPinToInterrupt(ENC_B_PIN_NO), rotary_enc_b, RISING);
-  }
-  else {
-    attachInterrupt(digitalPinToInterrupt(ENC_B_PIN_NO), rotary_enc_b, FALLING);
-  }
-}
-
-void rotary_enc_b() {
-  detachInterrupt(digitalPinToInterrupt(ENC_B_PIN_NO));
-  PinStatus a_level = digitalRead(ENC_A_PIN_NO);
-  if (digitalRead(ENC_B_PIN_NO) == LOW) {
-    rotary_move += a_level ? 1 : -1;
-  }
-  else {
-    rotary_move += a_level ? -1 : 1;
-  }
-  if (a_level == LOW) {
-    attachInterrupt(digitalPinToInterrupt(ENC_A_PIN_NO), rotary_enc_a, RISING);
-  }
-  else {
-    attachInterrupt(digitalPinToInterrupt(ENC_A_PIN_NO), rotary_enc_a, FALLING);
-  }
+void rotary_enc() {
+  int a_level = digitalRead(ENC_A_PIN_NO) ? 1 : 0;
+  int b_level = digitalRead(ENC_B_PIN_NO) ? 1 : 0;
+  current_rotary = a_level + (b_level << 1);
+  if (current_rotary == enc_cw_pat[previous_rotary]) rotary_move++;
+  if (current_rotary == enc_ccw_pat[previous_rotary]) rotary_move--;
+  previous_rotary = current_rotary;
 }
 #endif
 
