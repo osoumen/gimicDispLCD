@@ -9,11 +9,10 @@
 
 // #define ENABLE_SERIAL_OUT 1
 
-static_assert( CFG_TUH_ENUMERATION_BUFSIZE > 499 );
-
 uint8_t button_input=0;
 uint8_t joypad_input=0;
 uint8_t arrowkey_hold_time[4] = {0};
+uint8_t inputkey_hold_time[256] = {0};
 uint8_t button_ipol=0;
 volatile bool i2c_reading;
 uint8_t i2c_reading_address;
@@ -208,11 +207,30 @@ void loop1() {
 
 void KeyboardTask()
 {
-  uint8_t key = 0;
-  while (getKeyboardKey(&key)) {
-    if (key >= KEY_CURSOR_UP) {
+  static uint8_t input_keys[6];
+  uint8_t key_rep = 0;
+  if (getKeyboardKey(input_keys)) {
+    // 入力キーが変化した
+    for (int i=0; i<6; ++i) {
+      if (input_keys[i] != 0) {
+        inputkey_hold_time[input_keys[i]] = 0;
+        key_rep = input_keys[i];  // 同時に押されたキーは１つしか受け付けないがリピートはされるので許容する
+      }
+    }
+  }
+  for (int i=0; i<6; ++i) {
+    uint8_t key = input_keys[i];
+    if (key != 0) {
+      inputkey_hold_time[key]++;
+      if (inputkey_hold_time[key] > KEY_REPEAT_DELAY) {
+        if (((inputkey_hold_time[key] - KEY_REPEAT_DELAY) % KEY_REPEAT_RATE) == 0) {
+          key_rep = key;
+        }
+      }
+    }
+    if (key_rep >= KEY_CURSOR_UP) {
       uint8_t cmd[] = {0x1b, '[', 'A'};
-      switch (key) {
+      switch (key_rep) {
         case KEY_CURSOR_UP:
           cmd[2] = 'A';
       		TO_GIMIC_SERIAL.write(cmd, 3);
@@ -307,7 +325,7 @@ void KeyboardTask()
       }
     }
     else {
-      TO_GIMIC_SERIAL.write(key);
+      TO_GIMIC_SERIAL.write(key_rep);
     }
   }
 }
@@ -324,6 +342,7 @@ void JoypadTask()
   uint8_t cmd[] = {0x1b, '[', 'A'};
   const uint8_t cmd_end[] = {'D', 'A', 'B', 'C'};
 
+  // 十字キーはキーリピートに対応する
   for (int i=0; i<4; ++i) {
     if (up & arrow_key_bit) {
       arrowkey_hold_time[i] = 0;
@@ -334,8 +353,8 @@ void JoypadTask()
     }
     if (press & arrow_key_bit) {
       arrowkey_hold_time[i]++;
-      if (arrowkey_hold_time[i] > ARROW_KEY_REPEAT_DELAY) {
-        if (((arrowkey_hold_time[i] - ARROW_KEY_REPEAT_DELAY) % ARROW_KEY_REPEAT_RATE) == 0) {
+      if (arrowkey_hold_time[i] > KEY_REPEAT_DELAY) {
+        if (((arrowkey_hold_time[i] - KEY_REPEAT_DELAY) % KEY_REPEAT_RATE) == 0) {
           cmd[2] = cmd_end[i];
           TO_GIMIC_SERIAL.write(cmd,3);
 				}
@@ -345,34 +364,34 @@ void JoypadTask()
   }
 
   if (press & (1 << (BTN4_JOYPAD_BTN+6))) {
-    btn_state |= 1 << 6;
+    btn_state |= 1 << 6;  // ボタン４
   }
   if (down & (1 << (BS_JOYPAD_BTN+6))) {
     TO_GIMIC_SERIAL.write(0x08);  // BS
   }
   if (press & (1 << (BTN5_JOYPAD_BTN+6))) {
-    btn_state |= 1 << 7;
+    btn_state |= 1 << 7;  // ボタン５
   }
   if (down & (1 << (ENTER_JOYPAD_BTN+6))) {
-    TO_GIMIC_SERIAL.write('\r');
+    TO_GIMIC_SERIAL.write('\r');  // Enter
   }
   if (down & (1 << (PAGE_UP_JOYPAD_BTN+6))) {
     cmd[2] = '5';
-		TO_GIMIC_SERIAL.write(cmd, 3);
+		TO_GIMIC_SERIAL.write(cmd, 3);  // KEY_PAGE_UP
   }
   if (down & (1 << (PAGE_DOWN_JOYPAD_BTN+6))) {
     cmd[2] = '6';
-		TO_GIMIC_SERIAL.write(cmd, 3);
+		TO_GIMIC_SERIAL.write(cmd, 3);  // KEY_PAGE_DOWN
   }
   if (down & (1 << (MONITOR_MODE_JOYPAD_BTN+6))) {
     cmd[1] = 'O';
 		cmd[2] = 'P';
-		TO_GIMIC_SERIAL.write(cmd, 3);
+		TO_GIMIC_SERIAL.write(cmd, 3);  // F1(MONOTOR MODE)
   }
   if (down & (1 << (STOP_JOYPAD_BTN+6))) {
     cmd[1] = 'O';
 		cmd[2] = 'Q';
-		TO_GIMIC_SERIAL.write(cmd, 3);
+		TO_GIMIC_SERIAL.write(cmd, 3);  // F2(STOP)
   }
   joypad_input = btn_state;
 }

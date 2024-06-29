@@ -1,3 +1,5 @@
+#include "setup.h"
+
 #include "class/hid/hid.h"
 #include <sys/_intsup.h>
 #include <sys/_stdint.h>
@@ -5,16 +7,17 @@
 #include "tusb.h"
 #include "api/Common.h"
 
+// PS4コントローラーなどを接続する場合は
+// Arduino15/packages/rp2040/hardware/rp2040/xx.xx.xx/libraries/Adafruit_TinyUSB_Arduino/src/arduino/ports/rp2040/tusb_config_rp2040.h
+// を修正してください.
+static_assert( CFG_TUH_ENUMERATION_BUFSIZE > 499 );
+
 #define USE_ANSI_ESCAPE   0
 
 #define MAX_REPORT  4
 #define MAX_USAGE   32
 #define MAX_INPUT_KEY 32
 #define MAX_INPUT_KEY_MASK (MAX_INPUT_KEY - 1)
-
-static uint8_t sKeyInputQueue[MAX_INPUT_KEY];
-static uint32_t  sKeyInputQueueRInd = 0;
-static uint32_t  sKeyInputQueueWInd = 0;
 
 static uint8_t const keycode2ascii[128][2] =  {
     {0     , 0      }, /* 0x00 */
@@ -165,15 +168,15 @@ static struct
   GamePadInfo pad_info;
 } hid_info[CFG_TUH_HID];
 
+static uint8_t  sInputKeys[6] = {0};
+static bool     sInputKeysHasChanged = false;
 static uint32_t sButtons = 0;
 static int  sMouseMoveX = 0;
 static int  sMouseMoveY = 0;
 static int  sMouseMoveWheel = 0;
 static uint32_t sMouseButtons = 0;
 
-static uint32_t getRemainInputKeys();
 static void process_kbd_report(hid_keyboard_report_t const *report);
-static void put_pressed_key_fifo(uint8_t ch);
 static void process_mouse_report(uint8_t dev_addr, uint8_t instance, uint8_t const* report, uint16_t len);
 static void process_generic_report(uint8_t dev_addr, uint8_t instance, uint8_t const* report, uint16_t len);
 static uint32_t set_gamepadinfo_from_inputItem(const HIDInputReport *local_item, GamePadInfo *pad_info, uint32_t input_bit_count);
@@ -481,76 +484,26 @@ void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t cons
   }
 }
 
-static inline bool find_key_in_report(hid_keyboard_report_t const *report, uint8_t keycode)
+bool   getKeyboardKey(uint8_t key[6])
 {
-  for (uint8_t i=0; i<6; i++) {
-    if (report->keycode[i] == keycode)  return true;
+  if (sInputKeysHasChanged) {
+    sInputKeysHasChanged = false;
+    for(uint8_t i=0; i<6; i++) {
+      key[i] = sInputKeys[i];
+    }
+    return true;
   }
   return false;
 }
 
-static void put_pressed_key_fifo(uint8_t ch)
-{
-  if (getRemainInputKeys() < 1) return;
-
-	uint8_t *pd = sKeyInputQueue + (sKeyInputQueueWInd & MAX_INPUT_KEY_MASK);
-	++sKeyInputQueueWInd;	// TODO: atomic
-	*pd = ch;
-}
-
-bool   getKeyboardKey(uint8_t *key)
-{
-  if (getNumInputKeys() == 0) return false;
-
-  *key = *(sKeyInputQueue + (sKeyInputQueueRInd & MAX_INPUT_KEY_MASK));
-	++sKeyInputQueueRInd;	// TODO: atomic
-	return true;
-}
-
-static uint32_t getRemainInputKeys()
-{
-  uint32_t cridx = sKeyInputQueueRInd & MAX_INPUT_KEY_MASK;
-	uint32_t cwidx = sKeyInputQueueWInd & MAX_INPUT_KEY_MASK;
-	if (cridx <= cwidx) {
-		return cridx + (MAX_INPUT_KEY - cwidx) - 1;
-	}
-	else {
-		return cridx - cwidx - 1;
-	}
-}
-
-uint32_t getNumInputKeys()
-{
-  uint32_t cridx = sKeyInputQueueRInd & MAX_INPUT_KEY_MASK;
-	uint32_t cwidx = sKeyInputQueueWInd & MAX_INPUT_KEY_MASK;
-	if (cridx <= cwidx) {
-		return cwidx - cridx;
-	}
-	else {
-		return cwidx + (MAX_INPUT_KEY - cridx);
-	}
-}
-
 static void process_kbd_report(hid_keyboard_report_t const *report)
 {
-  static hid_keyboard_report_t prev_report = { 0, 0, {0} };
-
   for(uint8_t i=0; i<6; i++) {
-    if ( report->keycode[i] ) {
-      if ( find_key_in_report(&prev_report, report->keycode[i]) ) {
-        // prev_reportに含まれるキーはすでに押されているとみなす
-      }
-      else {
-        // prev_reportに含まれないキーは押されたキーである
-        bool const is_shift = report->modifier & (KEYBOARD_MODIFIER_LEFTSHIFT | KEYBOARD_MODIFIER_RIGHTSHIFT);
-        uint8_t ch = keycode2ascii[report->keycode[i]][is_shift ? 1 : 0];
-        if (ch != 0) put_pressed_key_fifo(ch);
-      }
-    }
-    // TODO: 離されたキーの処理
+    bool const is_shift = report->modifier & (KEYBOARD_MODIFIER_LEFTSHIFT | KEYBOARD_MODIFIER_RIGHTSHIFT);
+    uint8_t ch = keycode2ascii[report->keycode[i]][is_shift ? 1 : 0];
+    sInputKeys[i] = ch;
   }
-
-  prev_report = *report;
+  sInputKeysHasChanged = true;
 }
 
 void cursor_movement(int8_t x, int8_t y, int8_t wheel)
