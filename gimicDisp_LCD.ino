@@ -25,6 +25,7 @@ uint16_t mouse_X, mouse_Y;
 uint32_t mouse_buttons=0;
 bool backLightOn=false;
 int rotary_move=0;
+int to_hide_cursor=0;
 
 Adafruit_USBH_Host USBHost;
 tftDispSPI tft;
@@ -187,6 +188,11 @@ void loop1() {
       if (rotary_move > 0) TO_GIMIC_SERIAL.write("\x1b@995y");  // KEY_MOUSEWHEEL_UP
       else TO_GIMIC_SERIAL.write("\x1b@996y");  // KEY_MOUSEWHEEL_DOWN
       rotary_move = 0;
+    }
+
+    if (to_hide_cursor > 0) {
+      to_hide_cursor = 0;
+      tft.hideCursorPointer();
     }
 
     if (TO_GIMIC_SERIAL.overflow()) {
@@ -470,7 +476,7 @@ bool TouchPanelTask(bool draw)
     TO_GIMIC_SERIAL.printf("\x1b[<%d;%d;%dM", MOUSE_BTN1_REL | IS_TP, tp_X, tp_Y);
     // Serial.printf("\x1b[<%d;%d;%dM\n", MOUSE_BTN1_REL | IS_TP, tp_X, tp_Y);
     tp_On = false;
-    tft.hideCursorPointer();
+    // tft.hideCursorPointer();
     draw = true;
   }
   else if (isOn) {
@@ -487,6 +493,7 @@ bool TouchPanelTask(bool draw)
       tp_X = tp_Y = 9999;
       tp_On = true;
       lastTpDownTime = millis();
+      to_hide_cursor++;
     }
     if ((x != tp_X) || (y != tp_Y)) {
       TO_GIMIC_SERIAL.printf("\x1b[<%d;%d;%dM", btnState, x, y);
@@ -507,6 +514,7 @@ void buttonChange1() {
     pinInput |= 1 << 3;
   }
   button_input = pinInput;
+  ++to_hide_cursor;
 }
 #endif
 
@@ -517,6 +525,7 @@ void buttonChange2() {
     pinInput |= 1 << 4;
   }
   button_input = pinInput;
+  ++to_hide_cursor;
 }
 #endif
 
@@ -527,6 +536,7 @@ void buttonChange3() {
     pinInput |= 1 << 5;
   }
   button_input = pinInput;
+  ++to_hide_cursor;
 }
 #endif
 
@@ -537,6 +547,7 @@ void buttonChange4() {
     pinInput |= 1 << 6;
   }
   button_input = pinInput;
+  ++to_hide_cursor;
 }
 #endif
 
@@ -547,6 +558,7 @@ void buttonChange5() {
     pinInput |= 1 << 7;
   }
   button_input = pinInput;
+  ++to_hide_cursor;
 }
 #endif
 

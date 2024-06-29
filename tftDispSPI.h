@@ -313,6 +313,7 @@ private:
 #endif
   int16_t       mPointerX;
   int16_t       mPointerY;
+  bool          mIsCursorVisible;
 
   static int  sjisToLiner(int sjis);
 	static int	getLineLength(const char *str);

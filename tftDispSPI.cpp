@@ -8,6 +8,8 @@
 #include "misaki_gothic.h"
 #include "image.h"
 
+#define ENABLE_CURSOR_POINTER 1
+
 const uint16_t imgcurs[] PROGMEM = {
     8, 12,
     0x0000,0xFFFF,0xFFFF,0xFFFF,0xFFFF,0xFFFF,0xFFFF,0xFFFF,
@@ -77,6 +79,7 @@ tftDispSPI::tftDispSPI()
 , mReading2ByteCode(false)
 , mPointerX(-POINTER_POSY_SIZE)
 , mPointerY(-POINTER_POSY_SIZE)
+, mIsCursorVisible(false)
 {
   for (int i=0; i<MAX_LINES; ++i) {
     mUpdateStartCol[i] = MAX_COLUMNS;
@@ -219,7 +222,9 @@ bool tftDispSPI::updateContent()
       // 文字の描画
       update1LineText16bppBuffer(updateStartCol, updateEndCol, tmpSpr, mTmpSprPtr[mWriteTmpSpr], i);
 #if defined(ENABLE_CURSOR_POINTER)
-      redrawCursorPointerToSpr(updateStartCol * textWidth, updateEndCol * textWidth, tmpSpr, i);
+      if (mIsCursorVisible) {
+        redrawCursorPointerToSpr(updateStartCol * textWidth, updateEndCol * textWidth, tmpSpr, i);
+      }
 #endif
 #ifdef ENABLE_MULTI_CORE
       mTmpSprXPos[mWriteTmpSpr] = updateStartCol * textWidth;
@@ -835,14 +840,18 @@ void  tftDispSPI::setCursorPointer(int16_t x, int16_t y)
   mPointerX = x;
   mPointerY = y;
   setUpdateArea(mPointerX - POINTER_NEGX_SIZE, mPointerX + POINTER_POSX_SIZE, mPointerY - POINTER_NEGY_SIZE, mPointerY + POINTER_POSY_SIZE);
+  mIsCursorVisible = true;
 #endif
 }
 
 void  tftDispSPI::hideCursorPointer()
 {
 #if defined(ENABLE_CURSOR_POINTER)
-  setUpdateArea(mPointerX - POINTER_NEGX_SIZE, mPointerX + POINTER_POSX_SIZE, mPointerY - POINTER_NEGY_SIZE, mPointerY + POINTER_POSY_SIZE);
-  mPointerX = -POINTER_POSX_SIZE;
-  mPointerY = -POINTER_POSY_SIZE;
+  if (mIsCursorVisible) {
+    setUpdateArea(mPointerX - POINTER_NEGX_SIZE, mPointerX + POINTER_POSX_SIZE, mPointerY - POINTER_NEGY_SIZE, mPointerY + POINTER_POSY_SIZE);
+    mPointerX = -POINTER_POSX_SIZE;
+    mPointerY = -POINTER_POSY_SIZE;
+    mIsCursorVisible = false;
+  }
 #endif
 }
