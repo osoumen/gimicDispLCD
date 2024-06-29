@@ -211,15 +211,26 @@ void loop1() {
 void KeyboardTask()
 {
   static uint8_t input_keys[6];
+  uint8_t new_input_keys[6];
   uint8_t key_rep = 0;
-  if (getKeyboardKey(input_keys)) {
+  if (getKeyboardKey(new_input_keys)) {
     // 入力キーが変化した
     for (int i=0; i<6; ++i) {
-      if (input_keys[i] != 0) {
-        inputkey_hold_time[input_keys[i]] = 0;
-        key_rep = input_keys[i];  // 同時に押されたキーは１つしか受け付けないがリピートはされるので許容する
+      if (new_input_keys[i] != 0) {
+        bool hold = false;
+        for (int j=0; j<6; ++j) {
+          if (input_keys[j] == new_input_keys[i]) {
+            hold = true;
+            break;
+          }
+        }
+        if (hold == false) {
+          inputkey_hold_time[new_input_keys[i]] = 0;
+          key_rep = new_input_keys[i];  // 同時に押されたキーは１つしか受け付けないがリピートはされるので許容する
+        }
       }
     }
+    memcpy(input_keys, new_input_keys, 6);
   }
   for (int i=0; i<6; ++i) {
     uint8_t key = input_keys[i];
