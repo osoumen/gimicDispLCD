@@ -1,11 +1,12 @@
 #include "setup.h"
 
+#ifdef ENABLE_USB_HOST
+
 #include "class/hid/hid.h"
 #include <sys/_intsup.h>
 #include <sys/_stdint.h>
 #include "hid_host.h"
 #include "tusb.h"
-#include "api/Common.h"
 
 // PS4コントローラーなどを接続する場合は
 // Arduino15/packages/rp2040/hardware/rp2040/xx.xx.xx/libraries/Adafruit_TinyUSB_Arduino/src/arduino/ports/rp2040/tusb_config_rp2040.h
@@ -538,7 +539,9 @@ static void process_mouse_report(uint8_t dev_addr, uint8_t instance, uint8_t con
     // wheel &= (1 << padinfo->hatswitch_bits) - 1;
   }
   if (padinfo->num_buttons != 0) {
-    memcpy(&buttons, &report[padinfo->button_stbit >> 3], min(4, (padinfo->num_buttons + 7) >> 3));
+    uint32_t bytes = (padinfo->num_buttons + 7) >> 3;
+    if (bytes > 4) bytes = 4;
+    memcpy(&buttons, &report[padinfo->button_stbit >> 3], bytes);
     buttons >>= padinfo->button_stbit & 0x07;
     buttons &= (1 << padinfo->num_buttons) - 1;
   }
@@ -608,13 +611,17 @@ static void parse_gamepad_report(uint8_t dev_addr, uint8_t instance, uint8_t con
   }
 
   if (padinfo->num_buttons != 0) {
-    memcpy(&buttons, &report[padinfo->button_stbit >> 3], min(4, (padinfo->num_buttons + 7) >> 3));
+    uint32_t bytes = (padinfo->num_buttons + 7) >> 3;
+    if (bytes > 4) bytes = 4;
+    memcpy(&buttons, &report[padinfo->button_stbit >> 3], bytes);
     buttons >>= padinfo->button_stbit & 0x07;
     buttons &= (1 << padinfo->num_buttons) - 1;
     buttons <<= 7;
   }
   if (padinfo->hatswitch_bits != 0) {
-    memcpy(&hatsw, &report[padinfo->hatswitch_stbit >> 3], min(4, (padinfo->hatswitch_bits + 7) >> 3));
+    uint32_t bytes = (padinfo->hatswitch_bits + 7) >> 3;
+    if (bytes > 4) bytes = 4;
+    memcpy(&hatsw, &report[padinfo->hatswitch_stbit >> 3], bytes);
     hatsw >>= padinfo->hatswitch_stbit & 0x07;
     hatsw &= (1 << padinfo->hatswitch_bits) - 1;
     if (hatsw < 8) {
@@ -657,3 +664,5 @@ void      clearMouseMove()
   sMouseMoveY = 0;
   sMouseMoveWheel = 0;
 }
+
+#endif

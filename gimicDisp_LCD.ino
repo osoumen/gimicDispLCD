@@ -2,8 +2,10 @@
 
 #include "EscSeqParser.h"
 #include "tftDispSPI.h"
+#ifdef ENABLE_USB_HOST
 #include "hid_host.h"
 #include "Adafruit_TinyUSB.h"
+#endif
 #include <Wire.h>
 #include <EEPROM.h>
 
@@ -33,7 +35,9 @@ volatile int current_rotary=0;
 volatile int previous_rotary=0;
 int to_hide_cursor=0;
 
+#ifdef ENABLE_USB_HOST
 Adafruit_USBH_Host USBHost;
+#endif
 tftDispSPI tft;
 EscSeqParser parser(&tft);
 
@@ -52,11 +56,13 @@ enum MouseButtons {
 
 void doTPCallibration() {
   int onCount = 0;
+#if defined(BUTTON1_PIN_NO)
   for (int i=0; i<5; ++i) {
     if(digitalRead(BUTTON1_PIN_NO) == LOW) {
       ++onCount;
     }
   }
+#endif
   EEPROM.begin(256);
   uint8_t calData[11];
   if (onCount >= 3) {
@@ -150,7 +156,9 @@ void setup1() {
 #ifdef ENABLE_SERIAL_OUT
   Serial.begin(115200);
 #endif
+#ifdef ENABLE_USB_HOST
   USBHost.begin(0);
+#endif
 
   TO_GIMIC_SERIAL.setPinout(GIMIC_IF_TX_PIN, GIMIC_IF_RX_PIN);
   TO_GIMIC_SERIAL.setFIFOSize(4096);
@@ -175,9 +183,9 @@ void loop1() {
 #endif
   uint32_t updateStartTime = millis();
   bool draw = false;
-
+#ifdef ENABLE_USB_HOST
   USBHost.task();
-
+#endif
   if (backLightOn) {  
     while (TO_GIMIC_SERIAL.available() > 0) {
       parser.ParseByte(TO_GIMIC_SERIAL.read());
@@ -192,9 +200,11 @@ void loop1() {
 #ifdef TOUCH_CS
       draw = TouchPanelTask(draw);
 #endif
+#ifdef ENABLE_USB_HOST
       draw = MouseTask(draw);
       JoypadTask();
       KeyboardTask();
+#endif
     }
 
     if (rotary_move != 0) {
@@ -227,6 +237,7 @@ void loop1() {
   }
 }
 
+#ifdef ENABLE_USB_HOST
 void KeyboardTask()
 {
   static uint8_t input_keys[6];
@@ -480,6 +491,7 @@ bool MouseTask(bool draw)
   }
   return draw;
 }
+#endif
 
 bool TouchPanelTask(bool draw)
 {
