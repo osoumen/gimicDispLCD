@@ -51,7 +51,7 @@ const int sTextWidth[3] PROGMEM = {4, 5, 8};
 const int sRowChars[3] PROGMEM = {80, 64, 40};
 
 tftDispSPI::ScreenGlyph   tftDispSPI::mScreenChars[MAX_LINES*MAX_COLUMNS];
-#ifdef SINGLEBYTEGLYPH_TO_RAM
+#ifdef STORE_SINGLEBYTEGLYPH_TO_RAM
 uint8_t tftDispSPI::mAsciiGlyphCatch[16*256];
 #endif
 
@@ -737,7 +737,7 @@ void tftDispSPI::set_charsize(int x)
       case kTinyFont:
         mAsciiGlyphBytes = 8;
         m2ByteGlyphBytes = 8;
-#ifdef SINGLEBYTEGLYPH_TO_RAM
+#ifdef STORE_SINGLEBYTEGLYPH_TO_RAM
         memcpy(mAsciiGlyphCatch, misaki_4x8_jisx0201, sizeof(misaki_4x8_jisx0201));
         mAsciiGlyphData = mAsciiGlyphCatch;
 #else
@@ -748,7 +748,7 @@ void tftDispSPI::set_charsize(int x)
       case kSmallFont:
         mAsciiGlyphBytes = 11;
         m2ByteGlyphBytes = 22;
-#ifdef SINGLEBYTEGLYPH_TO_RAM
+#ifdef STORE_SINGLEBYTEGLYPH_TO_RAM
         memcpy(mAsciiGlyphCatch, mplus_j10r_jisx0201, sizeof(mplus_j10r_jisx0201));
         mAsciiGlyphData = mAsciiGlyphCatch;
 #else
@@ -759,7 +759,7 @@ void tftDispSPI::set_charsize(int x)
       case kNormalFont:
         mAsciiGlyphBytes = 16;
         m2ByteGlyphBytes = 32;
-#ifdef SINGLEBYTEGLYPH_TO_RAM
+#ifdef STORE_SINGLEBYTEGLYPH_TO_RAM
         memcpy(mAsciiGlyphCatch, shnm8x16r, sizeof(shnm8x16r));
         mAsciiGlyphData = mAsciiGlyphCatch;
 #else

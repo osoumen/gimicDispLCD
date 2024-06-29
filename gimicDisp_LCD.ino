@@ -31,8 +31,8 @@ Adafruit_USBH_Host USBHost;
 tftDispSPI tft;
 EscSeqParser parser(&tft);
 
-void recv(int len);
-void req();
+void i2c_recv(int len);
+void i2c_req();
 
 enum MouseButtons {
 	MOUSE_BTN1			= (1 << 0),
@@ -94,8 +94,8 @@ void setup() {
   TO_GIMIC_I2C.setSCL(GIMIC_IF_SCL_PIN);
   TO_GIMIC_I2C.setClock(400000);
   TO_GIMIC_I2C.begin(0x20);
-  TO_GIMIC_I2C.onReceive(recv);
-  TO_GIMIC_I2C.onRequest(req);
+  TO_GIMIC_I2C.onReceive(i2c_recv);
+  TO_GIMIC_I2C.onRequest(i2c_req);
   
 #ifdef BUTTON1_PIN_NO
   pinMode(BUTTON1_PIN_NO, INPUT_PULLUP);
@@ -604,7 +604,7 @@ void rotary_enc_b() {
 }
 #endif
 
-void recv(int len) {
+void i2c_recv(int len) {
   if (len == 1) {
     i2c_reading = true;
     i2c_reading_address = (uint8_t)TO_GIMIC_I2C.read();
@@ -632,7 +632,7 @@ void recv(int len) {
   }
 }
 
-void req() {
+void i2c_req() {
   if (i2c_reading) {
     i2c_reading = false;
     if (i2c_reading_address == 0x09) {

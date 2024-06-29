@@ -11,8 +11,6 @@ public:
 	
   void init();
 
-	// bool isAvailable() { return mIsAvailable; }
-	
 	void printw(const char* fmt, ...);
 	void vprintw(const char* fmt, va_list arg);
 	
@@ -308,7 +306,7 @@ private:
   const uint8_t *mAsciiGlyphData;
   const uint8_t *m2ByteGlyphData;
   static ScreenGlyph   mScreenChars[MAX_LINES*MAX_COLUMNS];
-#ifdef SINGLEBYTEGLYPH_TO_RAM
+#ifdef STORE_SINGLEBYTEGLYPH_TO_RAM
   static uint8_t mAsciiGlyphCatch[16*256];
 #endif
   int16_t       mPointerX;

@@ -18,6 +18,7 @@
 #define ENC_A_PIN_NO    27
 #define ENC_B_PIN_NO    28
 
+// ジョイパッド用のボタン設定
 // A btn
 #define BTN4_JOYPAD_BTN   1
 // B btn
@@ -43,7 +44,7 @@
 // #define UART_MAX_BAUD_RATE  230400
 // #define UART_MAX_BAUD_RATE  460800
 #define UART_MAX_BAUD_RATE  921600
-#define SINGLEBYTEGLYPH_TO_RAM 1
+#define STORE_SINGLEBYTEGLYPH_TO_RAM 1
 #define SCREEN_ROTATION 1
 #define INVERT_DISPLAY true
 // #define BG_BUFF_NUM 1

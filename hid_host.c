@@ -12,8 +12,6 @@
 // を修正してください.
 static_assert( CFG_TUH_ENUMERATION_BUFSIZE > 499 );
 
-#define USE_ANSI_ESCAPE   0
-
 #define MAX_REPORT  4
 #define MAX_USAGE   32
 #define MAX_INPUT_KEY 32

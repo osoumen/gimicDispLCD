@@ -29,7 +29,7 @@ enum Keys {
 #ifdef __cplusplus
 extern "C" {
 #endif
-bool   getKeyboardKey(uint8_t key[6]);
+bool      getKeyboardKey(uint8_t key[6]);
 uint32_t  getJoypadButtons();
 uint32_t  getMouseMove(int *x, int *y, int *wheel);
 void      clearMouseMove();
