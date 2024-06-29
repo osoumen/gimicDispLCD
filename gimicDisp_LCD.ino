@@ -163,18 +163,18 @@ void loop1() {
   bool draw = false;
 
   USBHost.task();
-  
-  while (TO_GIMIC_SERIAL.available() > 0) {
-    parser.ParseByte(TO_GIMIC_SERIAL.read());
-    draw = true;
-  }
-  // while (Serial.available() > 0) {
-  //   parser.ParseByte(Serial.read());
-  // }
 
-  if ((millis() - inputUpdateTime) > 10) {
-    inputUpdateTime = millis();
-    if (backLightOn) {
+  if (backLightOn) {  
+    while (TO_GIMIC_SERIAL.available() > 0) {
+      parser.ParseByte(TO_GIMIC_SERIAL.read());
+      draw = true;
+    }
+    // while (Serial.available() > 0) {
+    //   parser.ParseByte(Serial.read());
+    // }
+
+    if ((millis() - inputUpdateTime) > 10) {
+      inputUpdateTime = millis();
 #ifdef TOUCH_CS
       draw = TouchPanelTask(draw);
 #endif
@@ -182,26 +182,29 @@ void loop1() {
       JoypadTask();
       KeyboardTask();
     }
-  }
 
-  if (rotary_move != 0) {
-    if (rotary_move > 0) TO_GIMIC_SERIAL.write("\x1b@995y");  // KEY_MOUSEWHEEL_UP
-    else TO_GIMIC_SERIAL.write("\x1b@996y");  // KEY_MOUSEWHEEL_DOWN
-    rotary_move = 0;
-  }
+    if (rotary_move != 0) {
+      if (rotary_move > 0) TO_GIMIC_SERIAL.write("\x1b@995y");  // KEY_MOUSEWHEEL_UP
+      else TO_GIMIC_SERIAL.write("\x1b@996y");  // KEY_MOUSEWHEEL_DOWN
+      rotary_move = 0;
+    }
 
-  if (TO_GIMIC_SERIAL.overflow()) {
-    TO_GIMIC_SERIAL.flush();
-    tft.move(0,0);
-    tft.set_attribute(17);
-    tft.puts_("!!Overflowed!!");
-    draw = true;
-  }
-  if (draw) {
-    tft.updateContent();
+    if (TO_GIMIC_SERIAL.overflow()) {
+      TO_GIMIC_SERIAL.flush();
+      tft.move(0,0);
+      tft.set_attribute(17);
+      tft.puts_("!!Overflowed!!");
+      draw = true;
+    }
+    if (draw) {
+      tft.updateContent();
 #ifdef ENABLE_SERIAL_OUT
-    Serial.println(millis() - updateStartTime);
+      Serial.println(millis() - updateStartTime);
 #endif
+    }
+  }
+  else {
+    delay(10);
   }
 }
 
