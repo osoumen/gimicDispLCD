@@ -52,6 +52,8 @@
 
 #if defined(ARDUINO_ARCH_RP2040)
 #define ENABLE_MULTI_CORE 1
+#else
+#define gpio_set_input_hysteresis_enabled(x,y) (NULL)
 #endif
 
 #endif // setup_h

@@ -612,8 +612,10 @@ void i2c_recv(int len) {
     else if (address == 0x09) {
       if ((data & 0x01) == 0) {
         // リセット要求に応える
+#if defined(ARDUINO_ARCH_RP2040)
         watchdog_enable(1, 1);
         while(1);
+#endif
       }
 #ifdef LED_BUILTIN
       digitalWrite(LED_BUILTIN, (data & 0x02)?LOW:HIGH);  // led g
