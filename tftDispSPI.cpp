@@ -105,7 +105,9 @@ void tftDispSPI::init()
   mCursSpr.pushImage(0, 0, imgcurs[0], imgcurs[1], &imgcurs[2]);
   set_charsize(kNormalFont);
   memset(mScreenChars, 0, sizeof(mScreenChars));
+#ifdef ENABLE_SPI_DMA
   mTft.initDMA();
+#endif
 #ifdef ENABLE_MULTI_CORE
   sem_init(&xSemLcdPushWait, 0, 2);
   sem_init(&xSemLcdPushMutex, 2, 2);
@@ -117,6 +119,7 @@ void tftDispSPI::init()
 
 void  tftDispSPI::touch_calibrate(uint16_t *calData)
 {
+#ifdef TOUCH_CS
   uint8_t calDataOK = 0;
 
   mTft.fillScreen(TFT_BLACK);
@@ -138,11 +141,14 @@ void  tftDispSPI::touch_calibrate(uint16_t *calData)
   mTft.println("Calibration complete!");
 
   delay(3000);
+#endif
 }
 
 void  tftDispSPI::set_calibrate(const uint16_t *calData)
 {
+#ifdef TOUCH_CS
   mTft.setTouch((uint16_t *)calData);
+#endif
 }
 
 bool  tftDispSPI::getTouch(uint16_t *x, uint16_t *y, uint16_t threshold)
@@ -232,7 +238,11 @@ bool tftDispSPI::updateContent()
       sem_release(&xSemLcdPushWait);
 #else
       mTft.startWrite();
+#ifdef ENABLE_SPI_DMA
       mTft.pushImageDMA(updateStartCol * textWidth, i*textHeight, updateRectWidth, textHeight, mTmpSprPtr[mWriteTmpSpr]);
+#else
+      mTft.pushImage(updateStartCol * textWidth, i*textHeight, updateRectWidth, textHeight, mTmpSprPtr[mWriteTmpSpr]);
+#endif
       mTft.endWrite();
 #endif
 
@@ -322,7 +332,11 @@ void tftDispSPI::lcdPushProc()
 #endif
   const int textHeight = sTextHeight[mFontType];
   mTft.startWrite();
+#ifdef ENABLE_SPI_DMA
   mTft.pushImageDMA(mTmpSprXPos[mReadTmpSpr], mTmpSprYPos[mReadTmpSpr], mTmpSpr[mReadTmpSpr].width(), textHeight, mTmpSprPtr[mReadTmpSpr]);
+#else
+  mTft.pushImage(mTmpSprXPos[mReadTmpSpr], mTmpSprYPos[mReadTmpSpr], mTmpSpr[mReadTmpSpr].width(), textHeight, mTmpSprPtr[mReadTmpSpr]);
+#endif
   mTft.endWrite();
 #ifdef TOUCH_CS
   mutex_exit(&xSPIMutex);
