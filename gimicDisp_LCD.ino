@@ -240,7 +240,7 @@ void loop1() {
 #ifdef ENABLE_USB_HOST
 void KeyboardTask()
 {
-  static uint8_t input_keys[6];
+  static uint8_t input_keys[6] = {0};
   uint8_t new_input_keys[6];
   uint8_t key_rep = 0;
   if (getKeyboardKey(new_input_keys)) {
@@ -369,7 +369,9 @@ void KeyboardTask()
       }
     }
     else {
-      TO_GIMIC_SERIAL.write(key_rep);
+      if (key_rep != 0) {
+        TO_GIMIC_SERIAL.write(key_rep);
+      }
     }
   }
 }
