@@ -485,11 +485,13 @@ bool MouseTask(bool draw)
     draw = true;
   }
   // wheelの処理
-  if (wheel > 0) {
+  while (wheel > 0) {
     TO_GIMIC_SERIAL.write("\x1b@995y");  // KEY_MOUSEWHEEL_UP
+    --wheel;
   }
-  if (wheel < 0) {
+  while (wheel < 0) {
     TO_GIMIC_SERIAL.write("\x1b@996y");  // KEY_MOUSEWHEEL_DOWN
+    ++wheel;
   }
   return draw;
 }
