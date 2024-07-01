@@ -26,13 +26,8 @@ bool tp_On=false;
 uint16_t mouse_X, mouse_Y;
 uint32_t mouse_buttons=0;
 bool backLightOn=false;
-volatile int rotary_move=0;
-// const int enc_cw_pat[] = {1, 3, 0, 2};
-// const int enc_ccw_pat[] = {2, 0, 3, 1};
-const int enc_cw_pat[] = {1, 1, 0, 0};
-const int enc_ccw_pat[] = {2, 0, 2, 0};
-volatile int current_rotary=0;
-volatile int previous_rotary=0;
+volatile int rotary_inc=0;
+volatile int rotary_phase=0;
 int to_hide_cursor=0;
 
 #ifdef ENABLE_USB_HOST
@@ -207,10 +202,15 @@ void loop1() {
 #endif
     }
 
-    if (rotary_move != 0) {
-      if (rotary_move > 0) TO_GIMIC_SERIAL.write("\x1b@995y");  // KEY_MOUSEWHEEL_UP
-      else TO_GIMIC_SERIAL.write("\x1b@996y");  // KEY_MOUSEWHEEL_DOWN
-      rotary_move = 0;
+    while (rotary_inc != 0) {
+      if (rotary_inc > 0) {
+        TO_GIMIC_SERIAL.write("\x1b@995y");  // KEY_MOUSEWHEEL_UP
+        --rotary_inc;
+      }
+      if (rotary_inc < 0) {
+        TO_GIMIC_SERIAL.write("\x1b@996y");  // KEY_MOUSEWHEEL_DOWN
+        ++rotary_inc;
+      }
     }
 
     if (to_hide_cursor > 0) {
@@ -589,12 +589,17 @@ void buttonChange5() {
 
 #if defined(ENC_A_PIN_NO) && defined(ENC_B_PIN_NO)
 void rotary_enc() {
-  int a_level = digitalRead(ENC_A_PIN_NO) ? 1 : 0;
-  int b_level = digitalRead(ENC_B_PIN_NO) ? 1 : 0;
-  current_rotary = a_level + (b_level << 1);
-  if (current_rotary == enc_cw_pat[previous_rotary]) rotary_move++;
-  if (current_rotary == enc_ccw_pat[previous_rotary]) rotary_move--;
-  previous_rotary = current_rotary;
+  int a_level = digitalRead(ENC_A_PIN_NO) ? (1 << 2) : 0;
+  int b_level = digitalRead(ENC_B_PIN_NO) ? (1 << 3) : 0;
+  rotary_phase = a_level | b_level | (rotary_phase >> 2);
+  switch (rotary_phase) {
+    case (1 + (3 << 2)):
+      ++rotary_inc;
+      break;
+    case (3 + (1 << 2)):
+      --rotary_inc;
+      break;
+  }
 }
 #endif
 
