@@ -1,14 +1,16 @@
 #ifndef setup_h
 #define setup_h
 
+#define M5_UNIFIED 1
+
 // UART, I2Cのポート指定(必須)
-#if defined(ARDUINO_M5STACK_CORES3)
+#if defined(M5_UNIFIED)
 #define TO_GIMIC_SERIAL Serial2
 #define TO_GIMIC_I2C    Wire
-#define GIMIC_IF_TX_PIN     17
-#define GIMIC_IF_RX_PIN     18
-#define GIMIC_IF_SDA_PIN    2
-#define GIMIC_IF_SCL_PIN    1
+#define GIMIC_IF_TX_PIN     TXD2
+#define GIMIC_IF_RX_PIN     RXD2
+#define GIMIC_IF_SDA_PIN    M5.Ex_I2C.getSDA()
+#define GIMIC_IF_SCL_PIN    M5.Ex_I2C.getSCL()
 #else
 #define TO_GIMIC_SERIAL Serial1
 #define TO_GIMIC_I2C    Wire1

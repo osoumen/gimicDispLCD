@@ -1,9 +1,7 @@
 #include "setup.h"
-
-#if defined(ARDUINO_M5STACK_CORES3)
-#include <M5CoreS3.h>
+#if defined(M5_UNIFIED)
+#include <M5Unified.h>
 #endif
-
 #include "EscSeqParser.h"
 #include "tftDispSPI.h"
 #ifdef ENABLE_USB_HOST
@@ -17,7 +15,7 @@
 
 uint8_t button_input=0;
 uint8_t joypad_input=0;
-#if defined(ARDUINO_M5STACK_CORES3)
+#if defined(M5_UNIFIED)
 uint8_t m5_tp_btn=0;
 #endif
 uint8_t arrowkey_hold_time[4] = {0};
@@ -104,9 +102,9 @@ void doTPCallibration() {
 }
 
 void setup() {
-#if defined(ARDUINO_M5STACK_CORES3)
+#if defined(M5_UNIFIED)
   auto cfg = M5.config();
-  CoreS3.begin(cfg);
+  M5.begin(cfg);
 #endif
 
 #if defined(ARDUINO_ARCH_RP2040)
@@ -206,9 +204,6 @@ void loop1() {
 #ifdef ENABLE_USB_HOST
   USBHost.task();
 #endif
-#if defined(ARDUINO_M5STACK_CORES3)
-  CoreS3.update();
-#endif
   if (backLightOn) {  
     while (TO_GIMIC_SERIAL.available() > 0) {
       parser.ParseByte(TO_GIMIC_SERIAL.read());
@@ -220,7 +215,9 @@ void loop1() {
 
     if ((millis() - inputUpdateTime) > 10) {
       inputUpdateTime = millis();
-
+#if defined(M5_UNIFIED)
+      M5.update();
+#endif
       draw = TouchPanelTask(draw);
 #ifdef ENABLE_USB_HOST
       draw = MouseTask(draw);
@@ -535,8 +532,8 @@ bool TouchPanelTask(bool draw)
   bool isOn = tft.getTouch(&x, &y, TOUCH_THRESHOLD);
 #else
   bool isOn = false;
-#if defined(ARDUINO_M5STACK_CORES3)
-  auto t = CoreS3.Touch.getDetail();
+#if defined(M5_UNIFIED)
+  auto t = M5.Touch.getDetail();
   isOn = t.isPressed();
   if (isOn && t.y >= 240) {
     const uint8_t touch_btn[] = {1 << 3, 1 << 4, 1 << 7, 1 << 5, 1 << 6};
@@ -701,7 +698,7 @@ void i2c_req() {
   if (i2c_reading) {
     i2c_reading = false;
     if (i2c_reading_address == 0x09) {
-#if defined(ARDUINO_M5STACK_CORES3)
+#if defined(M5_UNIFIED)
       TO_GIMIC_I2C.write(button_input | joypad_input | m5_tp_btn);
 #else
       TO_GIMIC_I2C.write(button_input | joypad_input);
