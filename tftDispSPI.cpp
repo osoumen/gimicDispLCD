@@ -237,13 +237,13 @@ bool tftDispSPI::updateContent()
       mTmpSprYPos[mWriteTmpSpr] = i*textHeight;
       sem_release(&xSemLcdPushWait);
 #else
-      mTft.startWrite();
 #ifdef ENABLE_SPI_DMA
+      mTft.startWrite();
       mTft.pushImageDMA(updateStartCol * textWidth, i*textHeight, updateRectWidth, textHeight, mTmpSprPtr[mWriteTmpSpr]);
+      mTft.endWrite();
 #else
       mTft.pushImage(updateStartCol * textWidth, i*textHeight, updateRectWidth, textHeight, mTmpSprPtr[mWriteTmpSpr]);
 #endif
-      mTft.endWrite();
 #endif
 
       mWriteTmpSpr ^= 1;
@@ -331,13 +331,13 @@ void tftDispSPI::lcdPushProc()
   mutex_enter_blocking(&xSPIMutex);
 #endif
   const int textHeight = sTextHeight[mFontType];
-  mTft.startWrite();
 #ifdef ENABLE_SPI_DMA
+  mTft.startWrite();
   mTft.pushImageDMA(mTmpSprXPos[mReadTmpSpr], mTmpSprYPos[mReadTmpSpr], mTmpSpr[mReadTmpSpr].width(), textHeight, mTmpSprPtr[mReadTmpSpr]);
+  mTft.endWrite();
 #else
   mTft.pushImage(mTmpSprXPos[mReadTmpSpr], mTmpSprYPos[mReadTmpSpr], mTmpSpr[mReadTmpSpr].width(), textHeight, mTmpSprPtr[mReadTmpSpr]);
 #endif
-  mTft.endWrite();
 #ifdef TOUCH_CS
   mutex_exit(&xSPIMutex);
 #endif
