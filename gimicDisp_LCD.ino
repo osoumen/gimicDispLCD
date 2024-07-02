@@ -459,12 +459,13 @@ bool MouseTask(bool draw)
   }
   if (down & 1) {
     btnState |= MOUSE_BTN1;
-    if ((millis() - lastTpDownTime) < 500) {   // TODO: ダブルタップ時間を調整
-      if ((x * x + y * y) < 16*16) {
-        btnState |= MOUSE_BTN_DBL_CLK;
-      }
+    if ((millis() - lastTpDownTime) < DOUBLE_CLICK_TIME_MS) {
+      btnState |= MOUSE_BTN_DBL_CLK;
+      lastTpDownTime -= DOUBLE_CLICK_TIME_MS;
     }
-    lastTpDownTime = millis();
+    else {
+      lastTpDownTime = millis();
+    }
   }
   if (down & 2) {
     btnState |= MOUSE_BTN2;
@@ -512,16 +513,19 @@ bool TouchPanelTask(bool draw)
     int btnState = IS_TP;
     if (tp_On == false) {
       btnState |= MOUSE_BTN1;
-      if ((millis() - lastTpDownTime) < 500) {   // TODO: ダブルタップ時間を調整
+      if ((millis() - lastTpDownTime) < DOUBLE_CLICK_TIME_MS) {
         int distance_x = (tp_X - x);
         int distance_y = (tp_Y - y);
         if ((distance_x * distance_x + distance_y * distance_y) < 16*16) {
           btnState |= MOUSE_BTN_DBL_CLK;
+          lastTpDownTime -= DOUBLE_CLICK_TIME_MS;
         }
+      }
+      else {
+        lastTpDownTime = millis();
       }
       tp_X = tp_Y = 9999;
       tp_On = true;
-      lastTpDownTime = millis();
       to_hide_cursor++;
     }
     if ((x != tp_X) || (y != tp_Y)) {
