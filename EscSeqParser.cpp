@@ -446,28 +446,52 @@ void EscSeqParser::ParseEscapeSequence(const std::string &seq)
 									if (TO_GIMIC_SERIAL) {
                     TO_GIMIC_SERIAL.flush();
                     TO_GIMIC_SERIAL.end();
+#if defined(ARDUINO_ARCH_RP2040)
                     TO_GIMIC_SERIAL.begin(115200);
+#elif defined(ARDUINO_ARCH_ESP32)
+                    TO_GIMIC_SERIAL.begin(115200, SERIAL_8N1, GIMIC_IF_RX_PIN, GIMIC_IF_TX_PIN);
+#else
+                    TO_GIMIC_SERIAL.begin(115200);
+#endif
                   }
 									break;
                 case 16:
 									if (TO_GIMIC_SERIAL) {
                     TO_GIMIC_SERIAL.flush();
                     TO_GIMIC_SERIAL.end();
+#if defined(ARDUINO_ARCH_RP2040)
                     TO_GIMIC_SERIAL.begin(230400);
+#elif defined(ARDUINO_ARCH_ESP32)
+                    TO_GIMIC_SERIAL.begin(230400, SERIAL_8N1, GIMIC_IF_RX_PIN, GIMIC_IF_TX_PIN);
+#else
+                    TO_GIMIC_SERIAL.begin(230400);
+#endif
                   }
 									break;
                 case 17:
 									if (TO_GIMIC_SERIAL) {
                     TO_GIMIC_SERIAL.flush();
                     TO_GIMIC_SERIAL.end();
+#if defined(ARDUINO_ARCH_RP2040)
                     TO_GIMIC_SERIAL.begin(460800);
+#elif defined(ARDUINO_ARCH_ESP32)
+                    TO_GIMIC_SERIAL.begin(460800, SERIAL_8N1, GIMIC_IF_RX_PIN, GIMIC_IF_TX_PIN);
+#else
+                    TO_GIMIC_SERIAL.begin(460800);
+#endif
                   }
 									break;
                 case 18:
 									if (TO_GIMIC_SERIAL) {
                     TO_GIMIC_SERIAL.flush();
                     TO_GIMIC_SERIAL.end();
+#if defined(ARDUINO_ARCH_RP2040)
                     TO_GIMIC_SERIAL.begin(921600);
+#elif defined(ARDUINO_ARCH_ESP32)
+                    TO_GIMIC_SERIAL.begin(921600, SERIAL_8N1, GIMIC_IF_RX_PIN, GIMIC_IF_TX_PIN);
+#else
+                    TO_GIMIC_SERIAL.begin(921600);
+#endif
                   }
 									break;
 #endif

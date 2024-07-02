@@ -1,5 +1,9 @@
 #include "setup.h"
 
+#if defined(ARDUINO_M5STACK_CORES3)
+#include <M5CoreS3.h>
+#endif
+
 #include "EscSeqParser.h"
 #include "tftDispSPI.h"
 #ifdef ENABLE_USB_HOST
@@ -97,8 +101,19 @@ void doTPCallibration() {
 }
 
 void setup() {
+#if defined(ARDUINO_M5STACK_CORES3)
+  auto cfg = M5.config();
+  CoreS3.begin(cfg);
+#endif
+
+#if defined(ARDUINO_ARCH_RP2040)
   TO_GIMIC_I2C.setSDA(GIMIC_IF_SDA_PIN);
   TO_GIMIC_I2C.setSCL(GIMIC_IF_SCL_PIN);
+#elif defined(ARDUINO_ARCH_ESP32)
+  TO_GIMIC_I2C.setPins(GIMIC_IF_SDA_PIN, GIMIC_IF_SCL_PIN);
+#else
+#error Unknown Platform
+#endif
   TO_GIMIC_I2C.setClock(400000);
   TO_GIMIC_I2C.begin(0x20);
   TO_GIMIC_I2C.onReceive(i2c_recv);
@@ -155,9 +170,16 @@ void setup1() {
   USBHost.begin(0);
 #endif
 
+#if defined(ARDUINO_ARCH_RP2040)
   TO_GIMIC_SERIAL.setPinout(GIMIC_IF_TX_PIN, GIMIC_IF_RX_PIN);
   TO_GIMIC_SERIAL.setFIFOSize(4096);
   TO_GIMIC_SERIAL.begin(115200);
+#elif defined(ARDUINO_ARCH_ESP32)
+  TO_GIMIC_SERIAL.setRxBufferSize(4096);
+  TO_GIMIC_SERIAL.begin(115200, SERIAL_8N1, GIMIC_IF_RX_PIN, GIMIC_IF_TX_PIN);
+#else
+#error Unknown Platform
+#endif
 
   tft.init();
 
@@ -181,6 +203,9 @@ void loop1() {
 #ifdef ENABLE_USB_HOST
   USBHost.task();
 #endif
+#if defined(ARDUINO_M5STACK_CORES3)
+  CoreS3.update();
+#endif
   if (backLightOn) {  
     while (TO_GIMIC_SERIAL.available() > 0) {
       parser.ParseByte(TO_GIMIC_SERIAL.read());
@@ -192,9 +217,8 @@ void loop1() {
 
     if ((millis() - inputUpdateTime) > 10) {
       inputUpdateTime = millis();
-#ifdef TOUCH_CS
+
       draw = TouchPanelTask(draw);
-#endif
 #ifdef ENABLE_USB_HOST
       draw = MouseTask(draw);
       JoypadTask();
@@ -218,6 +242,7 @@ void loop1() {
       tft.hideCursorPointer();
     }
 
+#if defined(ARDUINO_ARCH_RP2040)
     if (TO_GIMIC_SERIAL.overflow()) {
       TO_GIMIC_SERIAL.flush();
       tft.move(0,0);
@@ -225,6 +250,8 @@ void loop1() {
       tft.puts_("!!Overflowed!!");
       draw = true;
     }
+#endif
+
     if (draw) {
       tft.updateContent();
 #ifdef ENABLE_SERIAL_OUT
@@ -501,7 +528,19 @@ bool MouseTask(bool draw)
 bool TouchPanelTask(bool draw)
 {
   uint16_t x,y;
+#ifdef TOUCH_CS
   bool isOn = tft.getTouch(&x, &y, TOUCH_THRESHOLD);
+#else
+  bool isOn = false;
+#if defined(ARDUINO_M5STACK_CORES3)
+  auto t = CoreS3.Touch.getDetail();
+  isOn = t.isPressed();
+  if (isOn) {
+    x = t.x;
+    y = t.y;
+  }
+#endif
+#endif
   if (isOn == false && tp_On == true) {
     TO_GIMIC_SERIAL.printf("\x1b[<%d;%d;%dM", MOUSE_BTN1_REL | IS_TP, tp_X, tp_Y);
     // Serial.printf("\x1b[<%d;%d;%dM\n", MOUSE_BTN1_REL | IS_TP, tp_X, tp_Y);
@@ -628,6 +667,12 @@ void i2c_recv(int len) {
 #if defined(ARDUINO_ARCH_RP2040)
         watchdog_enable(1, 1);
         while(1);
+#elif defined(ARDUINO_ARCH_ESP32)
+        delay(1);
+        ESP.restart();
+        while(1);
+#else
+#warning The reset action will not be performed
 #endif
       }
 #ifdef LED_BUILTIN

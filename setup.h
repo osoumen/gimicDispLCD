@@ -2,12 +2,22 @@
 #define setup_h
 
 // UART, I2Cのポート指定(必須)
+#if defined(ARDUINO_M5STACK_CORES3)
+#define TO_GIMIC_SERIAL Serial2
+#define TO_GIMIC_I2C    Wire
+#define GIMIC_IF_TX_PIN     17
+#define GIMIC_IF_RX_PIN     18
+#define GIMIC_IF_SDA_PIN    2
+#define GIMIC_IF_SCL_PIN    1
+#else
 #define TO_GIMIC_SERIAL Serial1
 #define TO_GIMIC_I2C    Wire1
 #define GIMIC_IF_TX_PIN     0
 #define GIMIC_IF_RX_PIN     1
 #define GIMIC_IF_SDA_PIN    2
 #define GIMIC_IF_SCL_PIN    3
+#endif
+
 
 // 使用しないピンはundefする事でピンを空ける事ができます
 #define BUTTON1_PIN_NO  4
@@ -54,6 +64,9 @@
 
 #if defined(ARDUINO_ARCH_RP2040)
 #define ENABLE_MULTI_CORE 1
+#elif defined(ARDUINO_ARCH_ESP32)
+// #define ENABLE_MULTI_CORE 1
+#define gpio_set_input_hysteresis_enabled(x,y) (NULL)
 #else
 #define gpio_set_input_hysteresis_enabled(x,y) (NULL)
 #endif
