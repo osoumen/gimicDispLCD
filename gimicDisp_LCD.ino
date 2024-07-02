@@ -17,6 +17,9 @@
 
 uint8_t button_input=0;
 uint8_t joypad_input=0;
+#if defined(ARDUINO_M5STACK_CORES3)
+uint8_t m5_tp_btn=0;
+#endif
 uint8_t arrowkey_hold_time[4] = {0};
 uint8_t inputkey_hold_time[256] = {0};
 uint8_t button_ipol=0;
@@ -535,6 +538,14 @@ bool TouchPanelTask(bool draw)
 #if defined(ARDUINO_M5STACK_CORES3)
   auto t = CoreS3.Touch.getDetail();
   isOn = t.isPressed();
+  if (isOn && t.y >= 240) {
+    const uint8_t touch_btn[] = {1 << 3, 1 << 4, 1 << 7, 1 << 5, 1 << 6};
+    m5_tp_btn = touch_btn[(t.x * 5) / 320];   // TODO: マルチタッチができないか検討
+    isOn = false;
+  }
+  else {
+    m5_tp_btn = 0;
+  }
   if (isOn) {
     x = t.x;
     y = t.y;
@@ -690,7 +701,11 @@ void i2c_req() {
   if (i2c_reading) {
     i2c_reading = false;
     if (i2c_reading_address == 0x09) {
+#if defined(ARDUINO_M5STACK_CORES3)
+      TO_GIMIC_I2C.write(button_input | joypad_input | m5_tp_btn);
+#else
       TO_GIMIC_I2C.write(button_input | joypad_input);
+#endif
     }
     else {
       TO_GIMIC_I2C.write(0);
