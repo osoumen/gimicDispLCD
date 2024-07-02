@@ -204,11 +204,11 @@ void loop1() {
 
     while (rotary_inc != 0) {
       if (rotary_inc > 0) {
-        TO_GIMIC_SERIAL.write("\x1b@995y");  // KEY_MOUSEWHEEL_UP
+        TO_GIMIC_SERIAL.write("\x1b@993y");  // KEY_JOG_CW
         --rotary_inc;
       }
       if (rotary_inc < 0) {
-        TO_GIMIC_SERIAL.write("\x1b@996y");  // KEY_MOUSEWHEEL_DOWN
+        TO_GIMIC_SERIAL.write("\x1b@994y");  // KEY_JOG_CCW
         ++rotary_inc;
       }
     }
