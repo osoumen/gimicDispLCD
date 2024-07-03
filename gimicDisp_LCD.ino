@@ -678,9 +678,10 @@ void i2c_recv(int len) {
         watchdog_enable(1, 1);
         while(1);
 #elif defined(ARDUINO_ARCH_ESP32)
-        delay(1);
-        ESP.restart();
-        while(1);
+        TO_GIMIC_SERIAL.flush();
+        TO_GIMIC_SERIAL.end();
+        TO_GIMIC_SERIAL.begin(115200, SERIAL_8N1, GIMIC_IF_RX_PIN, GIMIC_IF_TX_PIN);
+        // リセットしない
 #else
 #warning The reset action will not be performed
 #endif
