@@ -186,7 +186,9 @@ void setup1() {
 
   doTPCallibration();
 
-#ifdef TFT_BL
+#if defined(M5_UNIFIED)
+  M5.Display.setBrightness(0);
+#elif defined(TFT_BL)
   digitalWrite(TFT_BL, LOW);
 #endif
   tft.updateContent();
@@ -686,7 +688,9 @@ void i2c_recv(int len) {
 #ifdef LED_BUILTIN
       digitalWrite(LED_BUILTIN, (data & 0x02)?LOW:HIGH);  // led g
 #endif
-#ifdef TFT_BL
+#if defined(M5_UNIFIED)
+      M5.Display.setBrightness((data & 0x02)?0:255);
+#elif defined(TFT_BL)
       digitalWrite(TFT_BL, (data & 0x02)?LOW:HIGH);
 #endif
       backLightOn = (data & 0x02)?false:true;
