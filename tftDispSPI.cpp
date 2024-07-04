@@ -157,11 +157,11 @@ bool  tftDispSPI::getTouch(uint16_t *x, uint16_t *y, uint16_t threshold)
 #ifdef TOUCH_CS
   bool result;
 #ifdef ENABLE_MULTI_CORE
-  MutexLock(&xSPIMutex);
+  MutexLock(xSPIMutex);
 #endif
   result = mTft.getTouch(x, y, threshold);
 #ifdef ENABLE_MULTI_CORE
-  MutexUnlock(&xSPIMutex);
+  MutexUnlock(xSPIMutex);
 #endif
   return result;
 #else
@@ -329,7 +329,7 @@ void tftDispSPI::lcdPushProc()
 #ifdef ENABLE_MULTI_CORE
   SemaphoreTake(xSemLcdPushWait);
 #ifdef TOUCH_CS
-  MutexLock(&xSPIMutex);
+  MutexLock(xSPIMutex);
 #endif
   const int textHeight = sTextHeight[mFontType];
 #ifdef ENABLE_SPI_DMA
@@ -340,7 +340,7 @@ void tftDispSPI::lcdPushProc()
   mTft.pushImage(mTmpSprXPos[mReadTmpSpr], mTmpSprYPos[mReadTmpSpr], mTmpSpr[mReadTmpSpr].width(), textHeight, mTmpSprPtr[mReadTmpSpr]);
 #endif
 #ifdef TOUCH_CS
-  MutexUnlock(&xSPIMutex);
+  MutexUnlock(xSPIMutex);
 #endif
   SemaphoreGive(xSemLcdPushMutex);
   mReadTmpSpr ^= 1;
