@@ -244,15 +244,15 @@ void loop1() {
       tft.hideCursorPointer();
     }
 
-#if defined(ARDUINO_ARCH_RP2040)
-    if (TO_GIMIC_SERIAL.overflow()) {
-      TO_GIMIC_SERIAL.flush();
-      tft.move(0,0);
-      tft.set_attribute(17);
-      tft.puts_("!!Overflowed!!");
-      draw = true;
-    }
-#endif
+// #if defined(ARDUINO_ARCH_RP2040)
+//     if (TO_GIMIC_SERIAL.overflow()) {
+//       TO_GIMIC_SERIAL.flush();
+//       tft.move(0,0);
+//       tft.set_attribute(17);
+//       tft.puts_("!!Overflowed!!");
+//       draw = true;
+//     }
+// #endif
 
     if (draw) {
       tft.updateContent();
