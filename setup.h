@@ -62,7 +62,7 @@
 #define INVERT_DISPLAY true
 // #define BG_BUFF_NUM 1
 #define ENABLE_USB_HOST
-#define ENABLE_SPI_DMA 1
+#define ENABLE_TFT_DMA 1
 
 #if defined(ARDUINO_ARCH_RP2040)
 #define ENABLE_MULTI_CORE 1

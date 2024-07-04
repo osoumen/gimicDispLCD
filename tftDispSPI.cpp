@@ -106,7 +106,7 @@ void tftDispSPI::init()
   mCursSpr.pushImage(0, 0, imgcurs[0], imgcurs[1], &imgcurs[2]);
   set_charsize(kNormalFont);
   memset(mScreenChars, 0, sizeof(mScreenChars));
-#ifdef ENABLE_SPI_DMA
+#ifdef ENABLE_TFT_DMA
   mTft.initDMA();
 #endif
 #ifdef ENABLE_MULTI_CORE
@@ -238,7 +238,7 @@ bool tftDispSPI::updateContent()
       mTmpSprYPos[mWriteTmpSpr] = i*textHeight;
       SemaphoreGive(xSemLcdPushWait);
 #else
-#ifdef ENABLE_SPI_DMA
+#ifdef ENABLE_TFT_DMA
       mTft.startWrite();
       mTft.pushImageDMA(updateStartCol * textWidth, i*textHeight, updateRectWidth, textHeight, mTmpSprPtr[mWriteTmpSpr]);
       mTft.endWrite();
@@ -332,7 +332,7 @@ void tftDispSPI::lcdPushProc()
   MutexLock(xSPIMutex);
 #endif
   const int textHeight = sTextHeight[mFontType];
-#ifdef ENABLE_SPI_DMA
+#ifdef ENABLE_TFT_DMA
   mTft.startWrite();
   mTft.pushImageDMA(mTmpSprXPos[mReadTmpSpr], mTmpSprYPos[mReadTmpSpr], mTmpSpr[mReadTmpSpr].width(), textHeight, mTmpSprPtr[mReadTmpSpr]);
   mTft.endWrite();
