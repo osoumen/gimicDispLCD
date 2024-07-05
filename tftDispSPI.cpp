@@ -56,7 +56,7 @@ tftDispSPI::ScreenGlyph   tftDispSPI::mScreenChars[MAX_LINES*MAX_COLUMNS];
 uint8_t tftDispSPI::mAsciiGlyphCatch[16*256];
 #endif
 
-#ifdef ENABLE_MULTI_CORE
+#ifdef DO_LCD_WRITE_ANOTHER_CORE
 SemaphoreObject xSemLcdPushWait;
 SemaphoreObject xSemLcdPushMutex;
 #ifdef TOUCH_CS
@@ -109,7 +109,7 @@ void tftDispSPI::init()
 #ifdef ENABLE_TFT_DMA
   mTft.initDMA();
 #endif
-#ifdef ENABLE_MULTI_CORE
+#ifdef DO_LCD_WRITE_ANOTHER_CORE
   SemaphoreInit(xSemLcdPushWait, 0, 2);
   SemaphoreInit(xSemLcdPushMutex, 2, 2);
 #ifdef TOUCH_CS
@@ -156,11 +156,11 @@ bool  tftDispSPI::getTouch(uint16_t *x, uint16_t *y, uint16_t threshold)
 {
 #ifdef TOUCH_CS
   bool result;
-#ifdef ENABLE_MULTI_CORE
+#ifdef DO_LCD_WRITE_ANOTHER_CORE
   MutexLock(xSPIMutex);
 #endif
   result = mTft.getTouch(x, y, threshold);
-#ifdef ENABLE_MULTI_CORE
+#ifdef DO_LCD_WRITE_ANOTHER_CORE
   MutexUnlock(xSPIMutex);
 #endif
   return result;
@@ -215,7 +215,7 @@ bool tftDispSPI::updateContent()
       updateEndCol = min(sRowChars[mFontType], updateEndCol);
 
       const int updateRectWidth = (updateEndCol - updateStartCol) * textWidth;
-#ifdef ENABLE_MULTI_CORE
+#ifdef DO_LCD_WRITE_ANOTHER_CORE
       SemaphoreTake(xSemLcdPushMutex);
 #endif
       if (mTmpSprPtr[mWriteTmpSpr] != nullptr) {
@@ -233,7 +233,7 @@ bool tftDispSPI::updateContent()
         redrawCursorPointerToSpr(updateStartCol * textWidth, updateEndCol * textWidth, tmpSpr, i);
       }
 #endif
-#ifdef ENABLE_MULTI_CORE
+#ifdef DO_LCD_WRITE_ANOTHER_CORE
       mTmpSprXPos[mWriteTmpSpr] = updateStartCol * textWidth;
       mTmpSprYPos[mWriteTmpSpr] = i*textHeight;
       SemaphoreGive(xSemLcdPushWait);
@@ -326,7 +326,7 @@ void tftDispSPI::update1LineText16bppBuffer(int startCol, int endCol, TFT_eSprit
 
 void tftDispSPI::lcdPushProc()
 {
-#ifdef ENABLE_MULTI_CORE
+#ifdef DO_LCD_WRITE_ANOTHER_CORE
   SemaphoreTake(xSemLcdPushWait);
 #ifdef TOUCH_CS
   MutexLock(xSPIMutex);

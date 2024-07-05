@@ -66,8 +66,10 @@
 
 #if defined(ARDUINO_ARCH_RP2040)
 #define ENABLE_MULTI_CORE 1
+// #define DO_LCD_WRITE_ANOTHER_CORE 1
 #elif defined(ARDUINO_ARCH_ESP32)
 // #define ENABLE_MULTI_CORE 1
+// #define DO_LCD_WRITE_ANOTHER_CORE 1
 #define gpio_set_input_hysteresis_enabled(x,y) (NULL)
 #else
 #define gpio_set_input_hysteresis_enabled(x,y) (NULL)
