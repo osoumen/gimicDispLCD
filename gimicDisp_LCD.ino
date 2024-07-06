@@ -1,8 +1,13 @@
 #include "setup.h"
 #if defined(M5_UNIFIED)
 #include <M5Unified.h>
+#elif defined(USE_ANALOG_TOUCH_PANEL)
+#include "touch_analog.h"
+#elif defined(TOUCH_CS)
+#else
 #endif
 #include "EscSeqParser.h"
+#include "touch_intf.h"
 #include "tftDispSPI.h"
 #ifdef ENABLE_USB_HOST
 #include "hid_host.h"
@@ -40,6 +45,14 @@ Adafruit_USBH_Host USBHost;
 #endif
 tftDispSPI tft;
 EscSeqParser parser(&tft);
+TouchIntf *tp;
+#if defined(M5_UNIFIED)
+#elif defined(USE_ANALOG_TOUCH_PANEL)
+TouchAnalog touch_analog;
+#elif defined(TOUCH_CS)
+#else
+TouchNull touch_null;
+#endif
 
 void i2c_recv(int len);
 void i2c_req();
@@ -66,7 +79,7 @@ void doTPCallibration() {
   EEPROM.begin(256);
   uint8_t calData[11];
   if (onCount >= 3) {
-    tft.touch_calibrate((uint16_t*)calData);
+    tp->touch_calibrate((uint16_t*)calData);
     calData[10] = SCREEN_ROTATION;
     // キャリブレーション値をFlash領域に保存
     for (int i=0; i<11; ++i) {
@@ -89,7 +102,7 @@ void doTPCallibration() {
     }
     // 初期状態ならキャリブレーションを実行する
     if (initialCnt == 11) {
-      tft.touch_calibrate((uint16_t*)calData);
+      tp->touch_calibrate((uint16_t*)calData);
       calData[10] = SCREEN_ROTATION;
       for (int i=0; i<11; ++i) {
         EEPROM.write(i, calData[i]);
@@ -98,7 +111,7 @@ void doTPCallibration() {
     }
   }
   EEPROM.end();
-  tft.set_calibrate((uint16_t*)calData);
+  tp->set_calibrate((uint16_t*)calData);
 }
 
 void setup() {
@@ -184,7 +197,26 @@ void setup1() {
 
   tft.init();
 
+#if defined(M5_UNIFIED)
+  // TODO: M5用タッチ
+#elif defined(USE_ANALOG_TOUCH_PANEL)
+  tp = &touch_analog;
+  touch_analog.setTft(tft.getTft());
+#elif defined(TOUCH_CS)
+  tp = &tft;
+#else
+  tp = &touch_null;
+#endif
+
+#if defined(USE_ANALOG_TOUCH_PANEL) || defined(TOUCH_CS)
+#ifdef LED_BUILTIN
+  digitalWrite(LED_BUILTIN, HIGH);
+#endif
   doTPCallibration();
+#ifdef LED_BUILTIN
+  digitalWrite(LED_BUILTIN, LOW);
+#endif
+#endif
 
 #if defined(M5_UNIFIED)
   M5.Display.setBrightness(0);
@@ -531,7 +563,9 @@ bool TouchPanelTask(bool draw)
 {
   uint16_t x,y;
 #ifdef TOUCH_CS
-  bool isOn = tft.getTouch(&x, &y, TOUCH_THRESHOLD);
+  bool isOn = tp->getTouch(&x, &y, TOUCH_THRESHOLD);
+#elif defined(USE_ANALOG_TOUCH_PANEL)
+  bool isOn = tp->getTouch(&x, &y, TOUCH_THRESHOLD);
 #else
   bool isOn = false;
 #if defined(M5_UNIFIED)

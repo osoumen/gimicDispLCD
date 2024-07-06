@@ -2,9 +2,10 @@
 #define tftDispSPI_h
 
 #include "setup.h"
+#include "touch_intf.h"
 #include <TFT_eSPI.h>
 
-class tftDispSPI {
+class tftDispSPI : public TouchIntf {
 public:
 	tftDispSPI();
 	~tftDispSPI();
@@ -240,6 +241,8 @@ public:
   bool  getTouch(uint16_t *x, uint16_t *y, uint16_t threshold=600);
 
   void lcdPushProc();
+
+  TFT_eSPI *getTft() { return &mTft; }
 
 // protected:
 	void puts_(const char* str, uint32_t max_len=0);

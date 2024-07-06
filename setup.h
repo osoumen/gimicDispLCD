@@ -29,6 +29,14 @@
 #define BUTTON5_PIN_NO  26
 #define ENC_A_PIN_NO    27
 #define ENC_B_PIN_NO    28
+#define TP_XR_PIN_NO    26  // ADC入力ピン
+#define TP_YD_PIN_NO    27  // ADC入力ピン
+#define TP_XL_PIN_NO    21   // 汎用ピンで良い
+#define TP_YU_PIN_NO    22   // 汎用ピンで良い
+// #define TP_XR_PIN_NO    26  // ADC入力ピン
+// #define TP_YD_PIN_NO    27  // ADC入力ピン
+// #define TP_XL_PIN_NO    21   // 汎用ピンで良い
+// #define TP_YU_PIN_NO    22   // 汎用ピンで良い
 
 // ジョイパッド用のボタン設定
 // A btn
@@ -50,6 +58,10 @@
 
 #define KEY_REPEAT_DELAY  25
 #define KEY_REPEAT_RATE  2
+
+#if defined(TP_XR_PIN_NO) && defined(TP_YD_PIN_NO) && defined(TP_XL_PIN_NO) && defined(TP_YU_PIN_NO)
+#define USE_ANALOG_TOUCH_PANEL 1
+#endif
 
 #define TOUCH_THRESHOLD 300
 #define DOUBLE_CLICK_TIME_MS  330
