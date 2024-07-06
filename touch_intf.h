@@ -5,7 +5,8 @@
 
 class TouchIntf {
 public:
-  virtual bool  getTouch(uint16_t *x, uint16_t *y, uint16_t threshold=600) = 0;
+  virtual void  updateTouch(uint16_t threshold) = 0;
+  virtual bool  getTouch(uint16_t *x, uint16_t *y) const = 0;
   virtual void  touch_calibrate(uint16_t *calData) = 0;
   virtual void  set_calibrate(const uint16_t *calData) = 0;
 };

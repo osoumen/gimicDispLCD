@@ -238,7 +238,8 @@ public:
 	
   bool  updateContent();
 
-  bool  getTouch(uint16_t *x, uint16_t *y, uint16_t threshold=600);
+  void  updateTouch(uint16_t threshold=600);
+  bool  getTouch(uint16_t *x, uint16_t *y) const;
 
   void lcdPushProc();
 
@@ -315,6 +316,9 @@ private:
   int16_t       mPointerX;
   int16_t       mPointerY;
   bool          mIsCursorVisible;
+  int16_t       mTouchX;
+  int16_t       mTouchY;
+  bool          mTpPressed;
 
   static int  sjisToLiner(int sjis);
 	static int	getLineLength(const char *str);

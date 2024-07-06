@@ -16,7 +16,8 @@ public:
 // For the one we're using, its 300 ohms across the X plate
   TouchAnalog() : mTs(TP_YU_PIN_NO, TP_XR_PIN_NO, TP_YD_PIN_NO, TP_XL_PIN_NO, 600) {}
   void  setTft(TFT_eSPI *tft) { mTft = tft; }
-  bool  getTouch(uint16_t *x, uint16_t *y, uint16_t threshold);
+  void  updateTouch(uint16_t threshold);
+  bool  getTouch(uint16_t *x, uint16_t *y) const;
   void  touch_calibrate(uint16_t *calData);
   void  set_calibrate(const uint16_t *calData);
 
@@ -31,6 +32,7 @@ private:
   uint8_t  touchCalibration_rotate = 1, touchCalibration_invert_x = 2, touchCalibration_invert_y = 0;
   uint32_t _pressTime;        // Press and hold time-out
   uint16_t _pressX, _pressY;  // For future use (last sampled calibrated coordinates)
+  bool    _press = false;
 
   uint8_t validTouch(uint16_t *x, uint16_t *y, uint16_t threshold);
   void convertRawXY(uint16_t *x, uint16_t *y);

@@ -56,10 +56,16 @@ tftDispSPI::ScreenGlyph   tftDispSPI::mScreenChars[MAX_LINES*MAX_COLUMNS];
 uint8_t tftDispSPI::mAsciiGlyphCatch[16*256];
 #endif
 
+#ifdef TOUCH_CS
+ #ifndef DO_LCD_WRITE_ANOTHER_CORE
+  #define USE_SPI_MUTEX 1
+ #endif
+#endif
+
 #ifdef DO_LCD_WRITE_ANOTHER_CORE
 SemaphoreObject xSemLcdPushWait;
 SemaphoreObject xSemLcdPushMutex;
-#ifdef TOUCH_CS
+#ifdef USE_SPI_MUTEX
 MutexObject xSPIMutex;
 #endif
 #endif
@@ -81,6 +87,7 @@ tftDispSPI::tftDispSPI()
 , mPointerX(-POINTER_POSY_SIZE)
 , mPointerY(-POINTER_POSY_SIZE)
 , mIsCursorVisible(false)
+, mTpPressed(false)
 {
   for (int i=0; i<MAX_LINES; ++i) {
     mUpdateStartCol[i] = MAX_COLUMNS;
@@ -112,7 +119,7 @@ void tftDispSPI::init()
 #ifdef DO_LCD_WRITE_ANOTHER_CORE
   SemaphoreInit(xSemLcdPushWait, 0, 2);
   SemaphoreInit(xSemLcdPushMutex, 2, 2);
-#ifdef TOUCH_CS
+#ifdef USE_SPI_MUTEX
   MutexInit(xSPIMutex);
 #endif
 #endif
@@ -152,21 +159,28 @@ void  tftDispSPI::set_calibrate(const uint16_t *calData)
 #endif
 }
 
-bool  tftDispSPI::getTouch(uint16_t *x, uint16_t *y, uint16_t threshold)
+void  tftDispSPI::updateTouch(uint16_t threshold)
 {
 #ifdef TOUCH_CS
-  bool result;
-#ifdef DO_LCD_WRITE_ANOTHER_CORE
+
+#ifdef USE_SPI_MUTEX
   MutexLock(xSPIMutex);
 #endif
-  result = mTft.getTouch(x, y, threshold);
-#ifdef DO_LCD_WRITE_ANOTHER_CORE
+
+  mTpPressed = mTft.getTouch(&mTouchX, &mTouchY, threshold);
+
+#ifdef USE_SPI_MUTEX
   MutexUnlock(xSPIMutex);
 #endif
-  return result;
-#else
-  return false;
+
 #endif
+}
+
+bool  tftDispSPI::getTouch(uint16_t *x, uint16_t *y) const
+{
+  *x = mTouchX;
+  *y = mTouchY;
+  return mTpPressed;
 }
 
 int tftDispSPI::sjisToLiner(int sjis)
@@ -238,12 +252,18 @@ bool tftDispSPI::updateContent()
       mTmpSprYPos[mWriteTmpSpr] = i*textHeight;
       SemaphoreGive(xSemLcdPushWait);
 #else
+#ifdef USE_SPI_MUTEX
+      MutexLock(xSPIMutex);
+#endif
 #ifdef ENABLE_TFT_DMA
       mTft.startWrite();
       mTft.pushImageDMA(updateStartCol * textWidth, i*textHeight, updateRectWidth, textHeight, mTmpSprPtr[mWriteTmpSpr]);
       mTft.endWrite();
 #else
       mTft.pushImage(updateStartCol * textWidth, i*textHeight, updateRectWidth, textHeight, mTmpSprPtr[mWriteTmpSpr]);
+#endif
+#ifdef USE_SPI_MUTEX
+      MutexUnlock(xSPIMutex);
 #endif
 #endif
 
@@ -328,9 +348,7 @@ void tftDispSPI::lcdPushProc()
 {
 #ifdef DO_LCD_WRITE_ANOTHER_CORE
   SemaphoreTake(xSemLcdPushWait);
-#ifdef TOUCH_CS
-  MutexLock(xSPIMutex);
-#endif
+
   const int textHeight = sTextHeight[mFontType];
 #ifdef ENABLE_TFT_DMA
   mTft.startWrite();
@@ -338,9 +356,6 @@ void tftDispSPI::lcdPushProc()
   mTft.endWrite();
 #else
   mTft.pushImage(mTmpSprXPos[mReadTmpSpr], mTmpSprYPos[mReadTmpSpr], mTmpSpr[mReadTmpSpr].width(), textHeight, mTmpSprPtr[mReadTmpSpr]);
-#endif
-#ifdef TOUCH_CS
-  MutexUnlock(xSPIMutex);
 #endif
   SemaphoreGive(xSemLcdPushMutex);
   mReadTmpSpr ^= 1;

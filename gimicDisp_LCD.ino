@@ -30,6 +30,7 @@ volatile bool i2c_reading;
 uint8_t i2c_reading_address;
 uint32_t prev_joypad=0;
 uint32_t inputUpdateTime;
+uint32_t tpUpdateTime;
 uint32_t lastTpDownTime;
 uint16_t tp_X, tp_Y;
 bool tp_On=false;
@@ -45,7 +46,7 @@ Adafruit_USBH_Host USBHost;
 #endif
 tftDispSPI tft;
 EscSeqParser parser(&tft);
-TouchIntf *tp;
+TouchIntf *tp = nullptr;
 #if defined(M5_UNIFIED)
 #elif defined(USE_ANALOG_TOUCH_PANEL)
 TouchAnalog touch_analog;
@@ -171,6 +172,7 @@ void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, LOW);
 #endif
+
 #ifdef ENABLE_MULTI_CORE
 }
 
@@ -200,8 +202,8 @@ void setup1() {
 #if defined(M5_UNIFIED)
   // TODO: M5用タッチ
 #elif defined(USE_ANALOG_TOUCH_PANEL)
-  tp = &touch_analog;
   touch_analog.setTft(tft.getTft());
+  tp = &touch_analog;
 #elif defined(TOUCH_CS)
   tp = &tft;
 #else
@@ -229,6 +231,11 @@ void setup1() {
 void loop() {
 #ifdef ENABLE_MULTI_CORE
   tft.lcdPushProc();
+
+  if ((millis() - tpUpdateTime) > 10) {
+    tpUpdateTime = millis();
+    if (tp != nullptr) tp->updateTouch(TOUCH_THRESHOLD);
+  }
 }
 
 void loop1() {
@@ -563,9 +570,9 @@ bool TouchPanelTask(bool draw)
 {
   uint16_t x,y;
 #ifdef TOUCH_CS
-  bool isOn = tp->getTouch(&x, &y, TOUCH_THRESHOLD);
+  bool isOn = tp->getTouch(&x, &y);
 #elif defined(USE_ANALOG_TOUCH_PANEL)
-  bool isOn = tp->getTouch(&x, &y, TOUCH_THRESHOLD);
+  bool isOn = tp->getTouch(&x, &y);
 #else
   bool isOn = false;
 #if defined(M5_UNIFIED)

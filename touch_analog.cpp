@@ -79,7 +79,7 @@ uint8_t TouchAnalog::validTouch(uint16_t *x, uint16_t *y, uint16_t threshold){
   return true;
 }
 
-bool TouchAnalog::getTouch(uint16_t *x, uint16_t *y, uint16_t threshold)
+void TouchAnalog::updateTouch(uint16_t threshold)
 {
   uint16_t x_tmp, y_tmp;
   
@@ -93,19 +93,26 @@ bool TouchAnalog::getTouch(uint16_t *x, uint16_t *y, uint16_t threshold)
     if (validTouch(&x_tmp, &y_tmp, threshold)) valid++;;
   }
 
-  if (valid<1) { _pressTime = 0; return false; }
+  if (valid<1) { _pressTime = 0; _press = false; return; }
   
   _pressTime = millis() + 50;
 
   convertRawXY(&x_tmp, &y_tmp);
 
-  if (x_tmp >= VIEW_WIDTH || y_tmp >= VIEW_HEIGHT) return false;
+  if (x_tmp >= VIEW_WIDTH || y_tmp >= VIEW_HEIGHT) { _press = false; return; }
 
   _pressX = x_tmp;
   _pressY = y_tmp;
-  *x = _pressX;
-  *y = _pressY;
-  return (valid != 0) ? true : false;
+  _press = true;
+}
+
+bool TouchAnalog::getTouch(uint16_t *x, uint16_t *y) const
+{
+  if (_press) {
+    *x = _pressX;
+    *y = _pressY;
+  }
+  return _press;
 }
 
 void TouchAnalog::convertRawXY(uint16_t *x, uint16_t *y)
