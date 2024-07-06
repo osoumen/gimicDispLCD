@@ -316,8 +316,8 @@ private:
   int16_t       mPointerX;
   int16_t       mPointerY;
   bool          mIsCursorVisible;
-  int16_t       mTouchX;
-  int16_t       mTouchY;
+  uint16_t      mTouchX;
+  uint16_t      mTouchY;
   bool          mTpPressed;
 
   static int  sjisToLiner(int sjis);

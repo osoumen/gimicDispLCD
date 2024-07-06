@@ -1,6 +1,9 @@
 /*! TFT_eSPI v2.5.43 | MIT License | https://github.com/Bodmer/TFT_eSPI */
 
 #include "setup.h"
+
+#ifdef USE_ANALOG_TOUCH_PANEL
+
 #include "touch_analog.h"
 #include <TFT_eSPI.h>
 
@@ -256,3 +259,5 @@ void TouchAnalog::set_calibrate(const uint16_t *parameters){
   touchCalibration_invert_x = parameters[4] & 0x02;
   touchCalibration_invert_y = parameters[4] & 0x04;
 }
+
+#endif

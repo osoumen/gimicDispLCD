@@ -18,6 +18,20 @@
 
 // #define ENABLE_SERIAL_OUT 1
 
+#ifdef ENABLE_MULTI_CORE
+ #ifdef TOUCH_CS
+  #ifdef DO_TP_UPDATE_ANOTHER_CORE
+   #ifndef DO_LCD_WRITE_ANOTHER_CORE
+    #define TP_UPDATE_PERIOD  50
+   #endif
+  #endif
+ #endif
+#endif
+#ifndef TP_UPDATE_PERIOD
+#define TP_UPDATE_PERIOD 10
+#endif
+#define INPUT_UPDATE_PERIOD 10
+
 uint8_t button_input=0;
 uint8_t joypad_input=0;
 #if defined(M5_UNIFIED)
@@ -231,11 +245,12 @@ void setup1() {
 void loop() {
 #ifdef ENABLE_MULTI_CORE
   tft.lcdPushProc();
-
-  if ((millis() - tpUpdateTime) > 10) {
+#if defined(DO_TP_UPDATE_ANOTHER_CORE)
+  if ((millis() - tpUpdateTime) > TP_UPDATE_PERIOD) {
     tpUpdateTime = millis();
     if (tp != nullptr) tp->updateTouch(TOUCH_THRESHOLD);
   }
+#endif
 }
 
 void loop1() {
@@ -254,7 +269,7 @@ void loop1() {
     //   parser.ParseByte(Serial.read());
     // }
 
-    if ((millis() - inputUpdateTime) > 10) {
+    if ((millis() - inputUpdateTime) > INPUT_UPDATE_PERIOD) {
       inputUpdateTime = millis();
 #if defined(M5_UNIFIED)
       M5.update();
@@ -569,6 +584,9 @@ bool MouseTask(bool draw)
 bool TouchPanelTask(bool draw)
 {
   uint16_t x,y;
+#ifndef DO_TP_UPDATE_ANOTHER_CORE
+  tp->updateTouch(TOUCH_THRESHOLD);
+#endif
 #ifdef TOUCH_CS
   bool isOn = tp->getTouch(&x, &y);
 #elif defined(USE_ANALOG_TOUCH_PANEL)

@@ -1,7 +1,7 @@
 #ifndef setup_h
 #define setup_h
 
-#define M5_UNIFIED 1
+// #define M5_UNIFIED 1
 
 // UART, I2Cのポート指定(必須)
 #if defined(M5_UNIFIED)
@@ -29,10 +29,6 @@
 #define BUTTON5_PIN_NO  26
 #define ENC_A_PIN_NO    27
 #define ENC_B_PIN_NO    28
-#define TP_XR_PIN_NO    26  // ADC入力ピン
-#define TP_YD_PIN_NO    27  // ADC入力ピン
-#define TP_XL_PIN_NO    21   // 汎用ピンで良い
-#define TP_YU_PIN_NO    22   // 汎用ピンで良い
 // #define TP_XR_PIN_NO    26  // ADC入力ピン
 // #define TP_YD_PIN_NO    27  // ADC入力ピン
 // #define TP_XL_PIN_NO    21   // 汎用ピンで良い
@@ -70,7 +66,7 @@
 // #define UART_MAX_BAUD_RATE  460800
 #define UART_MAX_BAUD_RATE  921600
 #define STORE_SINGLEBYTEGLYPH_TO_RAM 1
-#define SCREEN_ROTATION 1
+#define SCREEN_ROTATION 3
 #define INVERT_DISPLAY true
 // #define BG_BUFF_NUM 1
 #define ENABLE_USB_HOST
@@ -78,7 +74,8 @@
 
 #if defined(ARDUINO_ARCH_RP2040)
 #define ENABLE_MULTI_CORE 1
-// #define DO_LCD_WRITE_ANOTHER_CORE 1
+#define DO_LCD_WRITE_ANOTHER_CORE 1
+// #define DO_TP_UPDATE_ANOTHER_CORE 1
 #elif defined(ARDUINO_ARCH_ESP32)
 // #define ENABLE_MULTI_CORE 1
 // #define DO_LCD_WRITE_ANOTHER_CORE 1

@@ -56,18 +56,27 @@ tftDispSPI::ScreenGlyph   tftDispSPI::mScreenChars[MAX_LINES*MAX_COLUMNS];
 uint8_t tftDispSPI::mAsciiGlyphCatch[16*256];
 #endif
 
-#ifdef TOUCH_CS
- #ifndef DO_LCD_WRITE_ANOTHER_CORE
-  #define USE_SPI_MUTEX 1
+// タッチパネルがSPI接続の場合はLCD転送と別コアになる時mutex処理する
+#ifdef ENABLE_MULTI_CORE
+ #ifdef TOUCH_CS
+  #ifdef DO_TP_UPDATE_ANOTHER_CORE
+   #ifndef DO_LCD_WRITE_ANOTHER_CORE
+    #define USE_SPI_MUTEX 1
+   #endif
+  #else
+   #ifdef DO_LCD_WRITE_ANOTHER_CORE
+    #define USE_SPI_MUTEX 1
+   #endif
+  #endif
  #endif
 #endif
 
 #ifdef DO_LCD_WRITE_ANOTHER_CORE
 SemaphoreObject xSemLcdPushWait;
 SemaphoreObject xSemLcdPushMutex;
+#endif
 #ifdef USE_SPI_MUTEX
 MutexObject xSPIMutex;
-#endif
 #endif
 
 tftDispSPI::tftDispSPI()
@@ -119,9 +128,9 @@ void tftDispSPI::init()
 #ifdef DO_LCD_WRITE_ANOTHER_CORE
   SemaphoreInit(xSemLcdPushWait, 0, 2);
   SemaphoreInit(xSemLcdPushMutex, 2, 2);
+#endif
 #ifdef USE_SPI_MUTEX
   MutexInit(xSPIMutex);
-#endif
 #endif
 }
 
@@ -348,7 +357,9 @@ void tftDispSPI::lcdPushProc()
 {
 #ifdef DO_LCD_WRITE_ANOTHER_CORE
   SemaphoreTake(xSemLcdPushWait);
-
+#ifdef USE_SPI_MUTEX
+  MutexLock(xSPIMutex);
+#endif
   const int textHeight = sTextHeight[mFontType];
 #ifdef ENABLE_TFT_DMA
   mTft.startWrite();
@@ -359,6 +370,9 @@ void tftDispSPI::lcdPushProc()
 #endif
   SemaphoreGive(xSemLcdPushMutex);
   mReadTmpSpr ^= 1;
+#ifdef USE_SPI_MUTEX
+  MutexUnlock(xSPIMutex);
+#endif
 #endif
 }
 
