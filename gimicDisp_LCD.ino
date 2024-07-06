@@ -19,6 +19,8 @@
 
 // #define ENABLE_SERIAL_OUT 1
 
+#define I2C_DEV_ADDR 0x20
+
 #ifdef ENABLE_MULTI_CORE
  #ifdef TOUCH_CS
   #ifdef DO_TP_UPDATE_ANOTHER_CORE
@@ -139,15 +141,17 @@ void setup() {
 #if defined(ARDUINO_ARCH_RP2040)
   TO_GIMIC_I2C.setSDA(GIMIC_IF_SDA_PIN);
   TO_GIMIC_I2C.setSCL(GIMIC_IF_SCL_PIN);
+  TO_GIMIC_I2C.setClock(400000);
+  TO_GIMIC_I2C.begin(I2C_DEV_ADDR);
+  TO_GIMIC_I2C.onReceive(i2c_recv);
+  TO_GIMIC_I2C.onRequest(i2c_req);
 #elif defined(ARDUINO_ARCH_ESP32)
-  TO_GIMIC_I2C.setPins(GIMIC_IF_SDA_PIN, GIMIC_IF_SCL_PIN);
+  TO_GIMIC_I2C.onReceive(i2c_recv);
+  TO_GIMIC_I2C.onRequest(i2c_req);
+  TO_GIMIC_I2C.begin(I2C_DEV_ADDR, GIMIC_IF_SDA_PIN, GIMIC_IF_SCL_PIN, 400000);
 #else
 #error Unknown Platform
 #endif
-  TO_GIMIC_I2C.setClock(400000);
-  TO_GIMIC_I2C.begin(0x20);
-  TO_GIMIC_I2C.onReceive(i2c_recv);
-  TO_GIMIC_I2C.onRequest(i2c_req);
   
 #ifdef BUTTON1_PIN_NO
   pinMode(BUTTON1_PIN_NO, INPUT_PULLUP);
