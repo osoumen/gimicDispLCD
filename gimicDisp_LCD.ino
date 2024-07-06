@@ -1,6 +1,7 @@
 #include "setup.h"
 #if defined(M5_UNIFIED)
 #include <M5Unified.h>
+#include "touch_m5.h"
 #elif defined(USE_ANALOG_TOUCH_PANEL)
 #include "touch_analog.h"
 #elif defined(TOUCH_CS)
@@ -34,9 +35,7 @@
 
 uint8_t button_input=0;
 uint8_t joypad_input=0;
-#if defined(M5_UNIFIED)
-uint8_t m5_tp_btn=0;
-#endif
+uint8_t below_tp_btn=0;
 uint8_t arrowkey_hold_time[4] = {0};
 uint8_t inputkey_hold_time[256] = {0};
 uint8_t button_ipol=0;
@@ -62,9 +61,11 @@ tftDispSPI tft;
 EscSeqParser parser(&tft);
 TouchIntf *tp = nullptr;
 #if defined(M5_UNIFIED)
+TouchM5 touch_m5;
 #elif defined(USE_ANALOG_TOUCH_PANEL)
 TouchAnalog touch_analog;
 #elif defined(TOUCH_CS)
+//
 #else
 TouchNull touch_null;
 #endif
@@ -214,7 +215,7 @@ void setup1() {
   tft.init();
 
 #if defined(M5_UNIFIED)
-  // TODO: M5用タッチ
+  tp = &touch_m5;
 #elif defined(USE_ANALOG_TOUCH_PANEL)
   touch_analog.setTft(tft.getTft());
   tp = &touch_analog;
@@ -271,9 +272,6 @@ void loop1() {
 
     if ((millis() - inputUpdateTime) > INPUT_UPDATE_PERIOD) {
       inputUpdateTime = millis();
-#if defined(M5_UNIFIED)
-      M5.update();
-#endif
       draw = TouchPanelTask(draw);
 #ifdef ENABLE_USB_HOST
       draw = MouseTask(draw);
@@ -587,29 +585,16 @@ bool TouchPanelTask(bool draw)
 #ifndef DO_TP_UPDATE_ANOTHER_CORE
   tp->updateTouch(TOUCH_THRESHOLD);
 #endif
-#ifdef TOUCH_CS
   bool isOn = tp->getTouch(&x, &y);
-#elif defined(USE_ANALOG_TOUCH_PANEL)
-  bool isOn = tp->getTouch(&x, &y);
-#else
-  bool isOn = false;
-#if defined(M5_UNIFIED)
-  auto t = M5.Touch.getDetail();
-  isOn = t.isPressed();
-  if (isOn && t.y >= 240) {
+  if (isOn && y >= 240) {
     const uint8_t touch_btn[] = {1 << 3, 1 << 4, 1 << 7, 1 << 5, 1 << 6};
-    m5_tp_btn = touch_btn[(t.x * 5) / 320];   // TODO: マルチタッチができないか検討
+    below_tp_btn = touch_btn[(x * 5) / 320];   // TODO: マルチタッチができないか検討
     isOn = false;
   }
   else {
-    m5_tp_btn = 0;
+    below_tp_btn = 0;
   }
-  if (isOn) {
-    x = t.x;
-    y = t.y;
-  }
-#endif
-#endif
+
   if (isOn == false && tp_On == true) {
     TO_GIMIC_SERIAL.printf("\x1b[<%d;%d;%dM", MOUSE_BTN1_REL | IS_TP, tp_X, tp_Y);
     // Serial.printf("\x1b[<%d;%d;%dM\n", MOUSE_BTN1_REL | IS_TP, tp_X, tp_Y);
@@ -749,7 +734,7 @@ void i2c_recv(int len) {
       digitalWrite(LED_BUILTIN, (data & 0x02)?LOW:HIGH);  // led g
 #endif
 #if defined(M5_UNIFIED)
-      M5.Display.setBrightness((data & 0x02)?0:255);
+      M5.Display.setBrightness((data & 0x02)?0:200);
 #elif defined(TFT_BL)
       digitalWrite(TFT_BL, (data & 0x02)?LOW:HIGH);
 #endif
@@ -762,11 +747,7 @@ void i2c_req() {
   if (i2c_reading) {
     i2c_reading = false;
     if (i2c_reading_address == 0x09) {
-#if defined(M5_UNIFIED)
-      TO_GIMIC_I2C.write(button_input | joypad_input | m5_tp_btn);
-#else
-      TO_GIMIC_I2C.write(button_input | joypad_input);
-#endif
+      TO_GIMIC_I2C.write(button_input | joypad_input | below_tp_btn);
     }
     else {
       TO_GIMIC_I2C.write(0);
