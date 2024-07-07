@@ -55,6 +55,7 @@ bool backLightOn=false;
 volatile int rotary_inc=0;
 volatile int rotary_phase=0;
 int to_hide_cursor=0;
+int renc_rot_table[16];
 
 #ifdef ENABLE_USB_HOST
 Adafruit_USBH_Host USBHost;
@@ -185,6 +186,7 @@ void setup() {
   gpio_set_input_hysteresis_enabled(ENC_B_PIN_NO, true);
   attachInterrupt(digitalPinToInterrupt(ENC_A_PIN_NO), rotary_enc, CHANGE);
   attachInterrupt(digitalPinToInterrupt(ENC_B_PIN_NO), rotary_enc, CHANGE);
+  make_renc_rot_table(RENC_CLICKS_PER_PULSE);
 #endif
 
 #ifdef LED_BUILTIN
@@ -693,18 +695,26 @@ void buttonChange5() {
 #endif
 
 #if defined(ENC_A_PIN_NO) && defined(ENC_B_PIN_NO)
+void make_renc_rot_table(int clicks_per_pulse)
+{
+  int steps = (clicks_per_pulse != 0) ? 4 / clicks_per_pulse : 1;
+  if (steps == 0) steps = 1;
+  memset(renc_rot_table, 0, sizeof(renc_rot_table));
+  for (int i=0; i<4; i+=steps) {
+    int ccw = (i + 1) & 3;
+    ccw ^= ccw >> 1;
+    int cw = (i + 2) & 3;
+    cw ^= cw >> 1;
+    renc_rot_table[(cw << 2) | ccw] = 1;
+    renc_rot_table[cw | (ccw << 2)] = -1;
+  }
+}
+
 void rotary_enc() {
   int a_level = digitalRead(ENC_A_PIN_NO) ? (1 << 2) : 0;
   int b_level = digitalRead(ENC_B_PIN_NO) ? (1 << 3) : 0;
   rotary_phase = a_level | b_level | (rotary_phase >> 2);
-  switch (rotary_phase) {
-    case (1 + (3 << 2)):
-      ++rotary_inc;
-      break;
-    case (3 + (1 << 2)):
-      --rotary_inc;
-      break;
-  }
+  rotary_inc += renc_rot_table[rotary_phase];
 }
 #endif
 
