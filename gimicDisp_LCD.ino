@@ -180,13 +180,13 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(BUTTON5_PIN_NO), buttonChange5, CHANGE);
 #endif
 #if defined(ENC_A_PIN_NO) && defined(ENC_B_PIN_NO)
+  make_renc_rot_table(RENC_CLICKS_PER_PULSE);
   pinMode(ENC_A_PIN_NO, INPUT_PULLUP);
   gpio_set_input_hysteresis_enabled(ENC_A_PIN_NO, true);
   pinMode(ENC_B_PIN_NO, INPUT_PULLUP);
   gpio_set_input_hysteresis_enabled(ENC_B_PIN_NO, true);
   attachInterrupt(digitalPinToInterrupt(ENC_A_PIN_NO), rotary_enc, CHANGE);
   attachInterrupt(digitalPinToInterrupt(ENC_B_PIN_NO), rotary_enc, CHANGE);
-  make_renc_rot_table(RENC_CLICKS_PER_PULSE);
 #endif
 
 #ifdef LED_BUILTIN
