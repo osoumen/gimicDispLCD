@@ -1,11 +1,11 @@
 #include "tftDispSPI.h"
 
-#include "shnm8x16r.h"
-#include "mplus_j10r_jisx0201.h"
-#include "mplus_j10r.h"
-#include "shnmk16.h"
-#include "misaki_4x8_jisx0201.h"
-#include "misaki_gothic.h"
+#include "fonts/shnm8x16r.h"
+#include "fonts/mplus_j10r_jisx0201.h"
+#include "fonts/mplus_j10r.h"
+#include "fonts/shnmk16.h"
+#include "fonts/misaki_4x8_jisx0201.h"
+#include "fonts/misaki_gothic.h"
 #include "image.h"
 #include "os_thread.h"
 
