@@ -5,6 +5,10 @@
 #include "touch_intf.h"
 #include <TFT_eSPI.h>
 
+#if defined(ARDUINO_ARCH_ESP32)
+#define SPLIT_BG_BUFFER 1
+#endif
+
 class tftDispSPI : public TouchIntf {
 public:
 	tftDispSPI();
@@ -273,6 +277,7 @@ private:
 
   static const int	VIEW_WIDTH = 320;
   static const int	VIEW_HEIGHT = 240;
+  static const int	VIEW_HEIGHT_DIV2 = 120;
 	static const int	MAX_LINES = VIEW_HEIGHT / 8;
 	static const int	MAX_COLUMNS = VIEW_WIDTH / 4;
 	static const int	STYLE_BOLD = 0x01;
@@ -286,10 +291,18 @@ private:
   static const int  POINTER_NEGY_SIZE = 0;
 
   TFT_eSPI      mTft;
+#ifdef SPLIT_BG_BUFFER
+  TFT_eSprite   mBgSpr[2];
+#else
   TFT_eSprite   mBgSpr;
+#endif
   TFT_eSprite   mTmpSpr[2];
   TFT_eSprite   mCursSpr;
+#ifdef SPLIT_BG_BUFFER
+  uint16_t*     mBgSprPtr[2];
+#else
   uint16_t*     mBgSprPtr;
+#endif
   uint16_t*     mTmpSprPtr[2];
   uint16_t*     mCursSprPtr;
   uint16_t      mTmpSprXPos[2];

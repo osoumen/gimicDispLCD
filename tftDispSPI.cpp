@@ -80,7 +80,11 @@ MutexObject xSPIMutex;
 #endif
 
 tftDispSPI::tftDispSPI()
+#ifdef SPLIT_BG_BUFFER
+: mBgSpr{TFT_eSprite(&mTft), TFT_eSprite(&mTft)}
+#else
 : mBgSpr(&mTft)
+#endif
 , mTmpSpr{TFT_eSprite(&mTft), TFT_eSprite(&mTft)}
 , mCursSpr(&mTft)
 , mTmpSprPtr{nullptr, nullptr}
@@ -114,9 +118,18 @@ void tftDispSPI::init()
   mTft.invertDisplay(INVERT_DISPLAY);
   mTft.setRotation(SCREEN_ROTATION);
   mTft.fillScreen(TFT_BLACK);
+#ifdef SPLIT_BG_BUFFER
+  mBgSpr[0].setColorDepth(16);
+  mBgSpr[1].setColorDepth(16);
+  mBgSpr[0].fillSprite(TFT_BLACK);
+  mBgSpr[1].fillSprite(TFT_BLACK);
+  mBgSprPtr[0] = (uint16_t*)mBgSpr[0].createSprite(VIEW_WIDTH, VIEW_HEIGHT_DIV2);
+  mBgSprPtr[1] = (uint16_t*)mBgSpr[1].createSprite(VIEW_WIDTH, VIEW_HEIGHT_DIV2);
+#else
   mBgSpr.setColorDepth(16);
   mBgSpr.fillSprite(TFT_BLACK);
   mBgSprPtr = (uint16_t*)mBgSpr.createSprite(VIEW_WIDTH, VIEW_HEIGHT);
+#endif
   mCursSpr.setColorDepth(16);
   mCursSprPtr = (uint16_t*)mCursSpr.createSprite(imgcurs[0], imgcurs[1]);
   mCursSpr.pushImage(0, 0, imgcurs[0], imgcurs[1], &imgcurs[2]);
@@ -248,7 +261,12 @@ bool tftDispSPI::updateContent()
       tmpSpr->setColorDepth(16);
       mTmpSprPtr[mWriteTmpSpr] = (uint16_t*)tmpSpr->createSprite(updateRectWidth, textHeight);
       // 背景のコピー
+#ifdef SPLIT_BG_BUFFER
+      tmpSpr->pushImage(-updateStartCol * textWidth, -i * textHeight, VIEW_WIDTH, VIEW_HEIGHT_DIV2, mBgSprPtr[0]);
+      tmpSpr->pushImage(-updateStartCol * textWidth, -i * textHeight + VIEW_HEIGHT_DIV2, VIEW_WIDTH, VIEW_HEIGHT_DIV2, mBgSprPtr[1]);
+#else
       tmpSpr->pushImage(-updateStartCol * textWidth, -i * textHeight, VIEW_WIDTH, VIEW_HEIGHT, mBgSprPtr);
+#endif
       // 文字の描画
       update1LineText16bppBuffer(updateStartCol, updateEndCol, tmpSpr, mTmpSprPtr[mWriteTmpSpr], i);
 #if defined(ENABLE_CURSOR_POINTER)
@@ -340,7 +358,16 @@ void tftDispSPI::update1LineText16bppBuffer(int startCol, int endCol, TFT_eSprit
         spr->drawFastHLine(drawPos * textWidth, textHeight-1, textWidth, fg_color);
       }
       else {
+#ifdef SPLIT_BG_BUFFER
+        if ((line+1) * textHeight <= VIEW_HEIGHT_DIV2) {
+          spr->pushImage(drawPos * textWidth, textHeight-1, textWidth, 1, mBgSprPtr[0]+spr->width()*((line+1)*textHeight-1)+drawPos * textWidth);
+        }
+        else {
+          spr->pushImage(drawPos * textWidth, textHeight-1, textWidth, 1, mBgSprPtr[1]+spr->width()*((line+1)*textHeight-VIEW_HEIGHT_DIV2-1)+drawPos * textWidth);
+        }
+#else
         spr->pushImage(drawPos * textWidth, textHeight-1, textWidth, 1, mBgSprPtr+spr->width()*((line+1)*textHeight-1)+drawPos * textWidth);
+#endif
       }
     }
     else if (fontHeight == 11) {
@@ -526,7 +553,12 @@ void tftDispSPI::vprintw(const char* fmt, va_list arg)
 void tftDispSPI::clear(void)
 {
 	mTextPosX = mTextPosY = 0;
+#ifdef SPLIT_BG_BUFFER
+  mBgSpr[0].fillSprite(TFT_BLACK);
+  mBgSpr[1].fillSprite(TFT_BLACK);
+#else
   mBgSpr.fillSprite(TFT_BLACK);
+#endif
   mReading2ByteCode = false;
   memset(mScreenChars, 0, sizeof(mScreenChars));
   for (int i=0; i<MAX_LINES; ++i) {
@@ -764,7 +796,12 @@ void tftDispSPI::curoff(void)
 
 void tftDispSPI::init_disp(void)
 {
+#ifdef SPLIT_BG_BUFFER
+  mBgSpr[0].fillSprite(TFT_BLACK);
+  mBgSpr[1].fillSprite(TFT_BLACK);
+#else
   mBgSpr.fillSprite(TFT_BLACK);
+#endif
 	clear();
 	set_attribute(0);
 }
@@ -823,7 +860,12 @@ void tftDispSPI::set_bgbuff(int x)
 
 void tftDispSPI::clear_bgbuff(int x)
 {
+#ifdef SPLIT_BG_BUFFER
+	mBgSpr[0].fillSprite(TFT_BLACK);
+	mBgSpr[1].fillSprite(TFT_BLACK);
+#else
 	mBgSpr.fillSprite(TFT_BLACK);
+#endif
   for (int i=0; i<MAX_LINES; ++i) {
     setUpdateArea(0, sRowChars[mFontType], i);
   }
@@ -832,14 +874,24 @@ void tftDispSPI::clear_bgbuff(int x)
 void tftDispSPI::draw_fillrect(int bg, int w, int h, int x, int y, int col )
 {
   uint16_t tft_col = conv555To565(col);
+#ifdef SPLIT_BG_BUFFER
+  mBgSpr[0].fillRect(x, y, w, h, tft_col);
+  mBgSpr[1].fillRect(x, y-VIEW_HEIGHT_DIV2, w, h, tft_col);
+#else
   mBgSpr.fillRect(x, y, w, h, tft_col);
+#endif
   setUpdateArea(x, x+w, y, y+h);
 }
 
 void tftDispSPI::draw_line(int bg, int x0, int y0, int x1, int y1, int col )
 {
   uint16_t tft_col = conv555To565(col);
+#ifdef SPLIT_BG_BUFFER
+  mBgSpr[0].drawLine(x0, y0, x1, y1, tft_col);
+  mBgSpr[1].drawLine(x0, y0-VIEW_HEIGHT_DIV2, x1, y1-VIEW_HEIGHT_DIV2, tft_col);
+#else
   mBgSpr.drawLine(x0, y0, x1, y1, tft_col);
+#endif
   setUpdateArea(min(x0,x1), max(x0,x1)+1, min(y0,y1), max(y0,y1)+1);
 }
 
@@ -847,10 +899,20 @@ void tftDispSPI::draw_ellipse(int bg, int fill, int cx, int cy, int xw, int yh, 
 {
   uint16_t tft_col = conv555To565(col);
   if (fill) {
+#ifdef SPLIT_BG_BUFFER
+    mBgSpr[0].fillEllipse(cx, cy, xw, yh, tft_col);
+    mBgSpr[1].fillEllipse(cx, cy-VIEW_HEIGHT_DIV2, xw, yh, tft_col);
+#else
     mBgSpr.fillEllipse(cx, cy, xw, yh, tft_col);
+#endif
   }
   else {
+#ifdef SPLIT_BG_BUFFER
+    mBgSpr[0].drawEllipse(cx, cy, xw, yh, tft_col);
+    mBgSpr[1].drawEllipse(cx, cy-VIEW_HEIGHT_DIV2, xw, yh, tft_col);
+#else
     mBgSpr.drawEllipse(cx, cy, xw, yh, tft_col);
+#endif
   }
   setUpdateArea(cx - xw, cx + xw + 1, cy - yh, cy + yh + 1);
 }
@@ -858,7 +920,12 @@ void tftDispSPI::draw_ellipse(int bg, int fill, int cx, int cy, int xw, int yh, 
 void tftDispSPI::draw_rectangle(int bg, int w, int h, int x, int y, int col)
 {
   uint16_t tft_col = conv555To565(col);
+#ifdef SPLIT_BG_BUFFER
+  mBgSpr[0].drawRect(x, y, w, h, tft_col);
+  mBgSpr[1].drawRect(x, y-VIEW_HEIGHT_DIV2, w, h, tft_col);
+#else
   mBgSpr.drawRect(x, y, w, h, tft_col);
+#endif
   setUpdateArea(x, x+w, y, y+h);
 }
 
@@ -867,7 +934,12 @@ void tftDispSPI::draw_image(int file, int bg, int x, int y)
   if (file > 117) return;
   const uint16_t  *imagePtr = imgArray[file];
   if (imagePtr != nullptr) {
+#ifdef SPLIT_BG_BUFFER
+    mBgSpr[0].pushImage(x, y, imagePtr[0], imagePtr[1], &imagePtr[2]);
+    mBgSpr[1].pushImage(x, y-VIEW_HEIGHT_DIV2, imagePtr[0], imagePtr[1], &imagePtr[2]);
+#else
     mBgSpr.pushImage(x, y, imagePtr[0], imagePtr[1], &imagePtr[2]);
+#endif
     setUpdateArea(x, x+imagePtr[0], y, y+imagePtr[1]);
   }
 }
