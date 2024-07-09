@@ -13,7 +13,8 @@ public:
 
 class TouchNull : public TouchIntf {
 public:
-  bool  getTouch(uint16_t *x, uint16_t *y, uint16_t threshold) { return false; }
+  void  updateTouch(uint16_t threshold) {}
+  bool  getTouch(uint16_t *x, uint16_t *y) const { return false; }
   void  touch_calibrate(uint16_t *calData) {}
   void  set_calibrate(const uint16_t *calData) {}
 };
