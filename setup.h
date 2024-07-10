@@ -76,6 +76,8 @@
 #define ENABLE_USB_HOST
 #define ENABLE_TFT_DMA 1
 
+#define USE_LGFX 1
+
 #if defined(ARDUINO_ARCH_RP2040)
 #define ENABLE_MULTI_CORE 1
 #define DO_LCD_WRITE_ANOTHER_CORE 1

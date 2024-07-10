@@ -3,7 +3,14 @@
 
 #include "setup.h"
 #include "touch_intf.h"
+#ifdef USE_LGFX
+#include <LovyanGFX.hpp>
+#include <LGFX_AUTODETECT.hpp>
+#include <LGFX_TFT_eSPI.hpp>
+#define pushToSprite pushSprite
+#else
 #include <TFT_eSPI.h>
+#endif
 
 #if defined(ARDUINO_ARCH_ESP32)
 #define SPLIT_BG_BUFFER 1
