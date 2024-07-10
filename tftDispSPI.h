@@ -3,11 +3,35 @@
 
 #include "setup.h"
 #include "touch_intf.h"
-#ifdef USE_LGFX
+#if defined(M5_UNIFIED)
+#include <M5Unified.h>
+
+using TFT_eSPI = M5GFX;
+
+class TFT_eSprite : public LGFX_Sprite {
+public:
+  TFT_eSprite() : LGFX_Sprite() { _psram = true; }
+  TFT_eSprite(LovyanGFX* parent) : LGFX_Sprite(parent) { _psram = true; }
+  template<typename T>
+  void pushToSprite(LovyanGFX* dst, int32_t x, int32_t y, const T& transp) { push_sprite(dst, x, y, _write_conv.convert(transp) & _write_conv.colormask); }
+  void* frameBuffer(uint8_t) { return getBuffer(); }
+};
+
+#elif defined(USE_LGFX)
 #include <LovyanGFX.hpp>
 #include <LGFX_AUTODETECT.hpp>
-#include <LGFX_TFT_eSPI.hpp>
-#define pushToSprite pushSprite
+
+using TFT_eSPI = LGFX;
+
+class TFT_eSprite : public LGFX_Sprite {
+public:
+  TFT_eSprite() : LGFX_Sprite() { _psram = true; }
+  TFT_eSprite(LovyanGFX* parent) : LGFX_Sprite(parent) { _psram = true; }
+  template<typename T>
+  void pushToSprite(LovyanGFX* dst, int32_t x, int32_t y, const T& transp) { push_sprite(dst, x, y, _write_conv.convert(transp) & _write_conv.colormask); }
+  void* frameBuffer(uint8_t) { return getBuffer(); }
+};
+
 #else
 #include <TFT_eSPI.h>
 #endif
