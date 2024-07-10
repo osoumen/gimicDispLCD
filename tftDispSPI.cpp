@@ -115,7 +115,7 @@ tftDispSPI::~tftDispSPI()
 void tftDispSPI::init()
 {
   mTft.init();
-  mTft.invertDisplay(INVERT_DISPLAY);
+  // mTft.invertDisplay(INVERT_DISPLAY);
   mTft.setRotation(SCREEN_ROTATION);
   mTft.fillScreen(TFT_BLACK);
 #ifdef SPLIT_BG_BUFFER
