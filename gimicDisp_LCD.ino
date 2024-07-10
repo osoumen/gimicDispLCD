@@ -244,7 +244,7 @@ void setup1() {
 #if defined(M5_UNIFIED)
   M5.Display.setBrightness(0);
 #elif defined(USE_LGFX)
-  tft->getTft()->setBrightness((data & 0x02)?0:200);
+  tft.getTft()->setBrightness(0);
 #elif defined(TFT_BL)
   digitalWrite(TFT_BL, LOW);
 #endif
@@ -752,7 +752,7 @@ void i2c_recv(int len) {
 #if defined(M5_UNIFIED)
       M5.Display.setBrightness((data & 0x02)?0:200);
 #elif defined(USE_LGFX)
-      tft->getTft()->setBrightness((data & 0x02)?0:200);
+      tft.getTft()->setBrightness((data & 0x02)?0:200);
 #elif defined(TFT_BL)
       digitalWrite(TFT_BL, (data & 0x02)?LOW:HIGH);
 #endif
