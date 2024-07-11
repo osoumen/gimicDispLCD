@@ -11,7 +11,11 @@
 // PS4コントローラーなどを接続する場合は
 // Arduino15/packages/rp2040/hardware/rp2040/xx.xx.xx/libraries/Adafruit_TinyUSB_Arduino/src/arduino/ports/rp2040/tusb_config_rp2040.h
 // を修正してください.
-static_assert( CFG_TUH_ENUMERATION_BUFSIZE > 499 );
+#if defined(CFG_TUH_ENUMERATION_BUFSIZE)
+ #if (CFG_TUH_ENUMERATION_BUFSIZE < 500)
+  #warning CFG_TUH_ENUMERATION_BUFSIZE < 500 some gamepads do not work properly.
+ #endif
+#endif
 
 #define MAX_REPORT  4
 #define MAX_USAGE   32
