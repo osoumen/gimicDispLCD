@@ -140,6 +140,9 @@ void setup() {
 #endif
 
 #if defined(ARDUINO_ARCH_RP2040)
+  uint32_t freq = clock_get_hz(clk_sys);
+  clock_configure(clk_peri, 0, CLOCKS_CLK_PERI_CTRL_AUXSRC_VALUE_CLK_SYS, freq, freq);
+
   TO_GIMIC_I2C.setSDA(GIMIC_IF_SDA_PIN);
   TO_GIMIC_I2C.setSCL(GIMIC_IF_SCL_PIN);
   TO_GIMIC_I2C.setClock(400000);
