@@ -18,7 +18,8 @@ public:
 };
 
 #elif defined(USE_LGFX)
-#include <LovyanGFX.hpp>
+// #include "lgfx_config/LGFX_ESP32_ILI9341.hpp"
+// #include "lgfx_config/LGFX_RP2040_ST7789.hpp"
 #include <LGFX_AUTODETECT.hpp>
 
 using TFT_eSPI = LGFX;
