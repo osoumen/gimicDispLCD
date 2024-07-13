@@ -99,12 +99,12 @@ void doTPCallibration() {
   }
 #endif
   EEPROM.begin(256);
-  uint8_t calData[11];
+  uint8_t calData[17];
   if (onCount >= 3) {
     tp->touch_calibrate((uint16_t*)calData);
-    calData[10] = SCREEN_ROTATION;
+    calData[16] = SCREEN_ROTATION;
     // キャリブレーション値をFlash領域に保存
-    for (int i=0; i<11; ++i) {
+    for (int i=0; i<17; ++i) {
       EEPROM.write(i, calData[i]);
     }
     EEPROM.commit();
@@ -112,21 +112,21 @@ void doTPCallibration() {
   else {
     int initialCnt = 0;
     // キャリブレーション値をFlash領域から読み出す
-    for (int i=0; i<11; ++i) {
+    for (int i=0; i<17; ++i) {
       calData[i] = EEPROM.read(i);
       if (calData[i] == 0xff) {
         ++initialCnt;
       }
     }
     // スクリーンの向きが変わったらキャリブレーションを実行する
-    if (calData[10] != SCREEN_ROTATION) {
-      initialCnt = 11;
+    if (calData[16] != SCREEN_ROTATION) {
+      initialCnt = 17;
     }
     // 初期状態ならキャリブレーションを実行する
-    if (initialCnt == 11) {
+    if (initialCnt == 17) {
       tp->touch_calibrate((uint16_t*)calData);
-      calData[10] = SCREEN_ROTATION;
-      for (int i=0; i<11; ++i) {
+      calData[16] = SCREEN_ROTATION;
+      for (int i=0; i<17; ++i) {
         EEPROM.write(i, calData[i]);
       }
       EEPROM.commit();
