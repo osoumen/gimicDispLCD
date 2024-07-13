@@ -149,7 +149,7 @@ void tftDispSPI::init()
 
 void  tftDispSPI::touch_calibrate(uint16_t *calData)
 {
-#ifdef TOUCH_CS
+#if defined(TOUCH_CS) || defined(USE_LGFX)
   uint8_t calDataOK = 0;
 
   mTft.fillScreen(TFT_BLACK);
@@ -176,14 +176,17 @@ void  tftDispSPI::touch_calibrate(uint16_t *calData)
 
 void  tftDispSPI::set_calibrate(const uint16_t *calData)
 {
-#ifdef TOUCH_CS
+#if defined(TOUCH_CS)
   mTft.setTouch((uint16_t *)calData);
+#elif defined(USE_LGFX)
+  if (mTft.touch() == nullptr) return;
+  mTft.setTouchCalibrate((uint16_t*)calData);
 #endif
 }
 
 void  tftDispSPI::updateTouch(uint16_t threshold)
 {
-#ifdef TOUCH_CS
+#if defined(TOUCH_CS)
 
 #ifdef USE_SPI_MUTEX
   MutexLock(xSPIMutex);
@@ -195,6 +198,9 @@ void  tftDispSPI::updateTouch(uint16_t threshold)
   MutexUnlock(xSPIMutex);
 #endif
 
+#elif defined(USE_LGFX)
+  if (mTft.touch() == nullptr) return;
+  mTpPressed = mTft.getTouch(&mTouchX, &mTouchY);
 #endif
 }
 

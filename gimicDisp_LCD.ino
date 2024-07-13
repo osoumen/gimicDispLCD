@@ -87,6 +87,9 @@ enum MouseButtons {
 };
 
 void doTPCallibration() {
+#ifdef USE_LGFX
+  if (tft.getTft()->touch() == nullptr) return;
+#endif
   int onCount = 0;
 #if defined(BUTTON1_PIN_NO)
   for (int i=0; i<5; ++i) {
@@ -230,11 +233,13 @@ void setup1() {
   tp = &touch_analog;
 #elif defined(TOUCH_CS)
   tp = &tft;
+#elif defined(USE_LGFX)
+  tp = &tft;
 #else
   tp = &touch_null;
 #endif
 
-#if defined(USE_ANALOG_TOUCH_PANEL) || defined(TOUCH_CS)
+#if defined(USE_ANALOG_TOUCH_PANEL) || defined(TOUCH_CS) || defined(USE_LGFX)
 #ifdef LED_BUILTIN
   digitalWrite(LED_BUILTIN, HIGH);
 #endif
