@@ -52,7 +52,7 @@ bool tp_On=false;
 uint16_t mouse_X, mouse_Y;
 uint32_t mouse_buttons=0;
 bool backLightOn=false;
-volatile int rotary_inc=0;
+int rotary_inc=0;
 volatile int rotary_phase=0;
 int to_hide_cursor=0;
 int renc_rot_table[16];
