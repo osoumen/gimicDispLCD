@@ -108,6 +108,7 @@ void doTPCallibration() {
       EEPROM.write(i, calData[i]);
     }
     EEPROM.commit();
+    delay(3000);
   }
   else {
     int initialCnt = 0;
@@ -130,6 +131,7 @@ void doTPCallibration() {
         EEPROM.write(i, calData[i]);
       }
       EEPROM.commit();
+      delay(3000);
     }
   }
   EEPROM.end();

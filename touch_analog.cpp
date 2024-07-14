@@ -32,8 +32,6 @@ void  TouchAnalog::touch_calibrate(uint16_t *calData)
   
   mTft->setTextColor(TFT_GREEN, TFT_BLACK);
   mTft->println("Calibration complete!");
-
-  delay(3000);
 }
 
 #define _RAWERR 20 // Deadband error allowed in successive position samples
