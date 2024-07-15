@@ -1,6 +1,8 @@
 #ifndef setup_h
 #define setup_h
 
+// 環境に合わせた設定ファイルを一つインクルードしてください。
+// ここに無い環境の場合はファイルを追加してください。
 // #include "user_config/ESP32_ILI9341.h"
 // #include "user_config/m5coreS3.h"
 // #include "user_config/m5stack_basic.h"

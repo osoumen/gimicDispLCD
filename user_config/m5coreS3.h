@@ -1,3 +1,19 @@
+/*
+TFT_eSPIライブラリは使用せず、M5Unifiedを使用します。
+未インストールの場合は、まずArduino IDEのライブラリマネージャから"M5Unified"をインストールしてください。
+
+Arduino IDEのビルド設定を以下のように変更してください。
+ボード: M5Stack > M5CoreS3
+PSRAM: "Disabled"
+他はデフォルト設定で構いません。PSRAMが有効化されていると画面が乱れますので注意してください。
+
+タッチパネルだけで操作できますが、ボタンを接続する場合は、ボタンピン定義のコメントを外してください。
+
+もし画面に何も表示されない場合は、
+G.I.M.I.C SETTINGSで、Startup When Powered をオフにして手動で電源を入れる設定に変更してみてください。
+
+*/
+
 // G.I.M.I.Cと接続するUART, I2Cのポート指定(必須)
 #define TO_GIMIC_SERIAL Serial2
 #define TO_GIMIC_I2C    Wire
@@ -5,6 +21,13 @@
 #define GIMIC_IF_RX_PIN     RXD2
 #define GIMIC_IF_SDA_PIN    M5.Ex_I2C.getSDA()
 #define GIMIC_IF_SCL_PIN    M5.Ex_I2C.getSCL()
+// G.I.M.I.Cの、EX I/Fコネクタと以下のように接続してください。
+// TXD(4) => PC_RX
+// RXD(2) => PC_TX
+// SDA(3) => PA_SDA
+// SCL(5) => PA_SCL
+// GND(6) => GND
+// +5V => BAT
 
 // メインの操作ボタンのピン割り当てを設定します。
 // ボタンの端子のもう片方をGNDに接続してください。
@@ -56,7 +79,9 @@
 #define SCREEN_ROTATION 1
 
 // USBホスト機能を有効化してゲームパッド、マウス、キーボードを使用出来るようにします。不要な場合はundefしてください。
+// 現在、RP2040のみ対応しています。
 // #define ENABLE_USB_HOST 1
+
 
 #define M5_UNIFIED 1
 

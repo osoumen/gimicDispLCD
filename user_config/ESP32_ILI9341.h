@@ -1,3 +1,38 @@
+/*
+使用する前に、TFT_eSPIライブラリの初期設定が必要です。
+未インストールの場合は、まずArduino IDEのライブラリマネージャから"TFT_eSPI"をインストールしてください。
+インストールされたライブラリ内のファイルを書き換えますので、あらかじめArduinoの環境設定でArduinoフォルダの場所を確認しておいてください。
+
+ILI9341用のセットアップファイルが用意されていますので、それを使用するようにUser_Setup_Select.hを書き換えます。
+Arduino/libraries/TFT_eSPI/User_Setup_Select.h を編集し、
+コメントアウトされた大量のセットアップファイルが並んでいる箇所で、
+#include <User_Setups/Setup42_ILI9341_ESP32.h>
+のコメントを外し、それ以外はすべてコメントアウトされた状態にしてください。
+その後、その後、User_Setups/Setup42_ILI9341_ESP32.h を以下のように書き換えてください。
+
+#define TFT_RST   4  // Reset pin (could connect to RST pin)
+↓
+#define TFT_RST   4  // Reset pin (could connect to RST pin)
+#define TFT_BL    25
+#define TFT_BACKLIGHT_ON HIGH
+
+//#define TOUCH_CS 5 // Chip select pin (T_CS) of touch screen
+↓
+#define TOUCH_CS 5 // Chip select pin (T_CS) of touch screen
+
+このファイル内で設定したピン番号の通りに液晶ユニットとボードを繋いでください。
+ピンを変更する場合は、使用するボードのマニュアルでSPIのピンを確認してください。
+
+次に、Arduino IDEのビルド設定を以下のように変更してください。
+ボード: esp32 > ESP32 Dev Module
+PSRAM: "Disabled"
+他はデフォルト設定で構いません。
+
+以上で、ILI9341をTFT_eSPIライブラリで使用出来るようになります。
+一度TFT_eSPIのデモプログラムの動作を確認する事をおすすめします。
+
+*/
+
 // G.I.M.I.Cと接続するUART, I2Cのポート指定(必須)
 #define TO_GIMIC_SERIAL Serial2
 #define TO_GIMIC_I2C    Wire1
@@ -5,6 +40,13 @@
 #define GIMIC_IF_RX_PIN     16
 #define GIMIC_IF_SDA_PIN    SDA
 #define GIMIC_IF_SCL_PIN    SCL
+// G.I.M.I.Cの、EX I/Fコネクタと以下のように接続してください。
+// TXD(4) => GIMIC_IF_RX_PIN
+// RXD(2) => GIMIC_IF_TX_PIN
+// SDA(3) => GIMIC_IF_SDA_PIN
+// SCL(5) => GIMIC_IF_SCL_PIN
+// GND(6) => GND
+// +5V => 5V
 
 // メインの操作ボタンのピン割り当てを設定します。
 // ボタンの端子のもう片方をGNDに接続してください。
@@ -56,6 +98,8 @@
 #define SCREEN_ROTATION 1
 
 // USBホスト機能を有効化してゲームパッド、マウス、キーボードを使用出来るようにします。不要な場合はundefしてください。
+// 現在、RP2040のみ対応しています。
 // #define ENABLE_USB_HOST 1
+
 
 // #define USE_LGFX 1
