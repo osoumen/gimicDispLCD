@@ -20,6 +20,8 @@
 // #define ENABLE_SERIAL_OUT 1
 
 #define I2C_DEV_ADDR 0x20
+#define TOUCH_CALLBRATION_EEPROM_POS (0)
+#define ROTARY_ENC_SETUP_EEPROM_POS (32)
 
 #ifdef ENABLE_MULTI_CORE
  #ifdef TOUCH_CS
@@ -86,6 +88,89 @@ enum MouseButtons {
   IS_TP             = (1 << 5)
 };
 
+extern "C" {
+extern const char *const rotary_encoder_setup_messages[];
+}
+
+void doRotaryEncSetup() {
+  int onCount = 0;
+  bool needSetup = false;
+#if defined(BUTTON2_PIN_NO)
+  for (int i=0; i<5; ++i) {
+    if(digitalRead(BUTTON2_PIN_NO) == LOW) {
+      ++onCount;
+    }
+  }
+#endif
+  if (onCount >= 3) {
+    needSetup = true;
+    make_renc_rot_table(2, false);
+  }
+  EEPROM.begin(256);
+  uint8_t sum = 0;
+  for (int i=0; i<16; ++i) {
+    renc_rot_table[i] = static_cast<int8_t>(EEPROM.read(i+ROTARY_ENC_SETUP_EEPROM_POS));
+    sum += ~renc_rot_table[i];
+  }
+  uint8_t check_byte = EEPROM.read(16+ROTARY_ENC_SETUP_EEPROM_POS);
+  if (check_byte != sum) {
+    needSetup = true;
+    make_renc_rot_table(2, false);
+  }
+  uint8_t value = 0;
+  int button = button_input;
+  int clicks = 2;
+  bool reverse = false;
+  while (needSetup) {
+    if (rotary_inc != 0) {
+      value += rotary_inc;
+      rotary_inc = 0;
+    }
+    if (button_input != button) {
+      uint8_t btn_down = (button_input ^ button) & button_input;
+      if (btn_down & (1 << 3)) {
+        if (clicks > 1) clicks >>= 1;
+        make_renc_rot_table(clicks, reverse);
+      }
+      if (btn_down & (1 << 4)) {
+        if (clicks < 4) clicks <<= 1;
+        make_renc_rot_table(clicks, reverse);
+      }
+      if (btn_down & (1 << 5)) {
+        reverse = !reverse;
+        make_renc_rot_table(clicks, reverse);
+      }
+      if (btn_down & (1 << 7)) {
+        sum = 0;
+        for (int i=0; i<16; ++i) {
+          EEPROM.write(i+ROTARY_ENC_SETUP_EEPROM_POS, renc_rot_table[i]);
+          sum += ~renc_rot_table[i];
+        }
+        EEPROM.write(16+ROTARY_ENC_SETUP_EEPROM_POS, sum);
+        EEPROM.commit();
+        // delay(3000);
+        needSetup = false;
+      }
+      button = button_input;
+    }
+    tft.move(0,0);
+    tft.puts_(rotary_encoder_setup_messages[0]);
+    tft.puts_(rotary_encoder_setup_messages[1]);
+    tft.puts_(rotary_encoder_setup_messages[2]);
+    tft.puts_(rotary_encoder_setup_messages[3]);
+    tft.printw(rotary_encoder_setup_messages[4], value);
+    tft.printw(rotary_encoder_setup_messages[5], clicks);
+    tft.printw(rotary_encoder_setup_messages[6], reverse?1:0);
+    tft.puts_(rotary_encoder_setup_messages[7]);
+    tft.puts_(rotary_encoder_setup_messages[8]);
+    tft.puts_(rotary_encoder_setup_messages[9]);
+    tft.puts_(rotary_encoder_setup_messages[10]);
+    tft.updateContent();
+    delay(10);
+  }
+  EEPROM.end();
+}
+
 void doTPCallibration() {
 #ifdef USE_LGFX
   if (tft.getTft()->touch() == nullptr) return;
@@ -105,7 +190,7 @@ void doTPCallibration() {
     calData[16] = SCREEN_ROTATION;
     // キャリブレーション値をFlash領域に保存
     for (int i=0; i<17; ++i) {
-      EEPROM.write(i, calData[i]);
+      EEPROM.write(i+TOUCH_CALLBRATION_EEPROM_POS, calData[i]);
     }
     EEPROM.commit();
     delay(3000);
@@ -114,7 +199,7 @@ void doTPCallibration() {
     int initialCnt = 0;
     // キャリブレーション値をFlash領域から読み出す
     for (int i=0; i<17; ++i) {
-      calData[i] = EEPROM.read(i);
+      calData[i] = EEPROM.read(i+TOUCH_CALLBRATION_EEPROM_POS);
       if (calData[i] == 0xff) {
         ++initialCnt;
       }
@@ -128,7 +213,7 @@ void doTPCallibration() {
       tp->touch_calibrate((uint16_t*)calData);
       calData[16] = SCREEN_ROTATION;
       for (int i=0; i<17; ++i) {
-        EEPROM.write(i, calData[i]);
+        EEPROM.write(i+TOUCH_CALLBRATION_EEPROM_POS, calData[i]);
       }
       EEPROM.commit();
       delay(3000);
@@ -188,7 +273,11 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(BUTTON5_PIN_NO), buttonChange5, CHANGE);
 #endif
 #if defined(ENC_A_PIN_NO) && defined(ENC_B_PIN_NO)
-  make_renc_rot_table(RENC_CLICKS_PER_PULSE);
+#if defined(RENC_CLICKS_PER_PULSE)
+  make_renc_rot_table(RENC_CLICKS_PER_PULSE, false);
+#else
+  make_renc_rot_table(2, false);
+#endif
   pinMode(ENC_A_PIN_NO, INPUT_PULLUP);
   gpio_set_input_hysteresis_enabled(ENC_A_PIN_NO, true);
   pinMode(ENC_B_PIN_NO, INPUT_PULLUP);
@@ -248,6 +337,22 @@ void setup1() {
   doTPCallibration();
 #ifdef LED_BUILTIN
   digitalWrite(LED_BUILTIN, LOW);
+#endif
+#endif
+
+#if defined(ENC_A_PIN_NO) && defined(ENC_B_PIN_NO)
+#if !defined(RENC_CLICKS_PER_PULSE) && defined(BUTTON1_PIN_NO) && defined(BUTTON2_PIN_NO) && defined(BUTTON3_PIN_NO) && defined(BUTTON5_PIN_NO)
+#ifdef LED_BUILTIN
+  digitalWrite(LED_BUILTIN, HIGH);
+#endif
+  doRotaryEncSetup();
+#ifdef LED_BUILTIN
+  digitalWrite(LED_BUILTIN, LOW);
+#endif
+#else
+  #if !defined(RENC_CLICKS_PER_PULSE)
+  #warning BUTTON1_PIN_NO & BUTTON2_PIN_NO & BUTTON3_PIN_NO & BUTTON5_PIN_NO is undefined. Rotary encoder setup needs them.
+  #endif
 #endif
 #endif
 
@@ -707,7 +812,7 @@ void buttonChange5() {
 #endif
 
 #if defined(ENC_A_PIN_NO) && defined(ENC_B_PIN_NO)
-void make_renc_rot_table(int clicks_per_pulse)
+void make_renc_rot_table(int clicks_per_pulse, bool reverse)
 {
   int steps = (clicks_per_pulse != 0) ? 4 / clicks_per_pulse : 1;
   if (steps == 0) steps = 1;
@@ -717,8 +822,8 @@ void make_renc_rot_table(int clicks_per_pulse)
     ccw ^= ccw >> 1;
     int cw = (i + 2) & 3;
     cw ^= cw >> 1;
-    renc_rot_table[(cw << 2) | ccw] = 1;
-    renc_rot_table[cw | (ccw << 2)] = -1;
+    renc_rot_table[(cw << 2) | ccw] = reverse?-1:1;
+    renc_rot_table[cw | (ccw << 2)] = reverse?1:-1;
   }
 }
 
