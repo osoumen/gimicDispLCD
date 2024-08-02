@@ -62,7 +62,7 @@ https://www.arduino.cc/en/software
 
 `https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json`
 
-その後、ボードマネージャから"Raspberry Pi Pico/RP2040 by Earle F. Philhower, III"をインストールしてください。(確認時点のバージョンは3.9.3)
+その後、ボードマネージャから"Raspberry Pi Pico/RP2040 by Earle F. Philhower, III"をインストールしてください。(確認時点のバージョンは3.9.4)
 #### M5Stackの場合
 追加のボードマネージャURLに以下を追加してください。
 
@@ -117,6 +117,12 @@ https://www.raspberrypi.com/documentation/microcontrollers/raspberry-pi-pico.htm
 Raspberry Pi Picoの場合、G.I.M.I.CがLCDを認識するとボード上のLEDが点灯します。
 
 USB HIDデバイスを使用する場合は市販のOTGケーブルを用いて接続してください。
+
+## 配線例
+
+### Raspberry Pi Pico + PicoResTouch-LCD-2.8(ST7789)
+![rpipico_PicoResTouch_2_8](examples/rpipico_PicoResTouch_2_8.png)
+
 
 ## なぜ作ったのか？
 G.I.M.I.CのMIDI機能は元々、LCDの利用を前提とした5ボタン操作を想定した設計で、e-DISPのグラフィック機能を必要とするものでした。しかし、e-DISP3の生産が終了となり、後継品は仕様的に適合しない事が分かり、PC接続の環境でもフル機能が使えるようにする必要が出てきました。当初はPC接続にはteraTermが使われていましたが、e-DISPのようなグラフィック機能はありませんので、そのままでは機能が制限されてしまいます。そのため、MIDI機能をリリースするために用意したのが、macOS/Windows版gimicDispでした。その後MIDI機能はリリースされましたが、元々LCD用の設計だっただけに、PCでの使用に必ずしも最適ではないUXであるPC版の方が多く利用されている点をもどかしく思っていました。この状況を何とかしたいと思い、gimicDispのMCU版を作成する事にしました。
