@@ -82,7 +82,9 @@ USB Stack: "Adafruit TinyUSB Host (native)"に設定して書き込んだ後は�
 
 // ロータリーエンコーダーのパルスあたりのクリック数を{1,2,4}から指定します
 // クリック数=30,パルス数=15のタイプなら2が適切です。ノンクリックのタイプは0または4を指定してください。
-#define RENC_CLICKS_PER_PULSE 2
+// 未定義にすると初回起動時にセットアップを行います。再セットアップする場合はボタン２を押しながら起動します。
+// セットアップにはボタン1,2,3,5が必須です。
+// #define RENC_CLICKS_PER_PULSE 2
 
 // USBゲームパッドのボタン割り当てを変更できます
 #define BTN4_JOYPAD_BTN   1 // A btn
@@ -111,7 +113,7 @@ USB Stack: "Adafruit TinyUSB Host (native)"に設定して書き込んだ後は�
 #define UART_MAX_BAUD_RATE  921600
 
 // 画面の転置設定です。逆さまや横向きになる場合に変更してください。
-#define SCREEN_ROTATION 3
+#define SCREEN_ROTATION 1
 
 // USBホスト機能を有効化してゲームパッド、マウス、キーボードを使用出来るようにします。不要な場合はundefしてください。
 // 現在、RP2040のみ対応しています。
