@@ -104,7 +104,6 @@ void doRotaryEncSetup() {
 #endif
   if (onCount >= 3) {
     needSetup = true;
-    make_renc_rot_table(2, false);
   }
   EEPROM.begin(256);
   uint8_t sum = 0;
@@ -115,12 +114,14 @@ void doRotaryEncSetup() {
   uint8_t check_byte = EEPROM.read(16+ROTARY_ENC_SETUP_EEPROM_POS);
   if (check_byte != sum) {
     needSetup = true;
-    make_renc_rot_table(2, false);
   }
   uint8_t value = 0;
   int button = button_input;
   int clicks = 2;
   bool reverse = false;
+  if (needSetup) {
+    make_renc_rot_table(clicks, reverse);
+  }
   while (needSetup) {
     if (rotary_inc != 0) {
       value += rotary_inc;
@@ -822,8 +823,12 @@ void make_renc_rot_table(int clicks_per_pulse, bool reverse)
     ccw ^= ccw >> 1;
     int cw = (i + 2) & 3;
     cw ^= cw >> 1;
-    renc_rot_table[(cw << 2) | ccw] = reverse?-1:1;
-    renc_rot_table[cw | (ccw << 2)] = reverse?1:-1;
+    if (reverse) {
+      ccw = ((ccw << 1) & 2) | ((ccw >> 1) & 1);
+      cw = ((cw << 1) & 2) | ((cw >> 1) & 1);
+    }
+    renc_rot_table[(cw << 2) | ccw] = -1;
+    renc_rot_table[cw | (ccw << 2)] = 1;
   }
 }
 
