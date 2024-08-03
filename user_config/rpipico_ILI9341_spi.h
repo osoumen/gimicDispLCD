@@ -14,7 +14,7 @@ Arduino/libraries/TFT_eSPI/User_Setup_Select.h を編集し、
 //#define TOUCH_CS 21     // Chip select pin (T_CS) of touch scree
 ↓
 #define TFT_BL   17  // LED back-light
-#define TFT_BACKLIGHT_ON HIGH
+#define TFT_BACKLIGHT_ON LOW
 #define TOUCH_CS 21     // Chip select pin (T_CS) of touch screen
 
 このファイル内で設定したピン番号の通りに液晶ユニットとボードを繋いでください。

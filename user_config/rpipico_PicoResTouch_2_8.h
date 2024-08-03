@@ -16,6 +16,10 @@ Setup23_TTGO_TM.h は、 Arduino/libraries/TFT_eSPI/User_Setups に上書きコ�
 ↓
 // #define TFT_SDA_READ // Read from display, it only provides an SDA pin
 
+#define TFT_BACKLIGHT_ON HIGH  // Level to turn ON back-light (HIGH or LOW)
+↓
+#define TFT_BACKLIGHT_ON LOW  // Level to turn ON back-light (HIGH or LOW)
+
 //#define TFT_INVERSION_ON
 #define TFT_INVERSION_OFF
 ↓

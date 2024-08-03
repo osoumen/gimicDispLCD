@@ -14,7 +14,7 @@ Arduino/libraries/TFT_eSPI/User_Setup_Select.h を編集し、
 ↓
 #define TFT_RST   4  // Reset pin (could connect to RST pin)
 #define TFT_BL    25
-#define TFT_BACKLIGHT_ON HIGH
+#define TFT_BACKLIGHT_ON LOW
 
 //#define TOUCH_CS 5 // Chip select pin (T_CS) of touch screen
 ↓
