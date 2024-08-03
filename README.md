@@ -113,6 +113,9 @@ G.I.M.I.Cの接続が無い状態ではLCDのバックライトが消灯しま�
 再度行いたい場合は、ボタン１を押しながら起動してください。
 ボタンを使用できない場合は、ボード上のフラッシュメモリを初期化する事で再度キャリブレーションを行えます。
 https://www.raspberrypi.com/documentation/microcontrollers/raspberry-pi-pico.html#software-utilities
+ロータリーエンコーダーのピンを有効化している場合は、次の画面で、クリック数、方向の設定を行います。
+この設定は、RENC_CLICKS_PER_PULSEを定義するとスキップできます。
+再度行いたい場合は、ボタン２を押しながら起動してください。
 
 Raspberry Pi Picoの場合、G.I.M.I.CがLCDを認識するとボード上のLEDが点灯します。
 
