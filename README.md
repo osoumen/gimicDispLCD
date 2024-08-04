@@ -124,11 +124,19 @@ USB HIDデバイスを使用する場合は市販のOTGケーブルを用いて�
 ## 配線例
 
 ### Raspberry Pi Pico + PicoResTouch-LCD-2.8(ST7789)
+詳細はuser_config/rpipico_PicoResTouch_2_8.h を参照してください。
 ![rpipico_PicoResTouch_2_8](examples/rpipico_PicoResTouch_2_8.png)
 
+### Raspberry Pi Pico + ILI9341(SPI)
+詳細はuser_config/rpipico_ILI9341_spi.h を参照してください。
+![rpipico_PicoResTouch_2_8](examples/rpipico_ILI9341_spi.png)
+
+### Raspberry Pi Pico + ILI9341(8bit Parallel)
+詳細はuser_config/rpipico_ILI9341_parallel.h を参照してください。
+![rpipico_PicoResTouch_2_8](examples/rpipico_ILI9341_parallel.png)
 
 ## なぜ作ったのか？
-G.I.M.I.CのMIDI機能は元々、LCDの利用を前提とした5ボタン操作を想定した設計で、e-DISPのグラフィック機能を必要とするものでした。しかし、e-DISP3の生産が終了となり、後継品は仕様的に適合しない事が分かり、PC接続の環境でもフル機能が使えるようにする必要が出てきました。当初はPC接続にはteraTermが使われていましたが、e-DISPのようなグラフィック機能はありませんので、そのままでは機能が制限されてしまいます。そのため、MIDI機能をリリースするために用意したのが、macOS/Windows版gimicDispでした。その後MIDI機能はリリースされましたが、元々LCD用の設計だっただけに、PCでの使用に必ずしも最適ではないUXであるPC版の方が多く利用されている点をもどかしく思っていました。この状況を何とかしたいと思い、gimicDispのMCU版を作成する事にしました。
+G.I.M.I.CのMIDI機能は元々、LCDの利用を前提とした5ボタン操作を想定した設計で、e-DISPのグラフィック機能を必要とするものでした。しかし、e-DISP3の生産が終了となり、後継品は仕様的に適合しない事が分かり、PC環境での使用も考慮する必要が出てきました。当初はPC接続にはteraTermが使われていましたが、e-DISPのようなグラフィック機能はありませんので、そのままではフル機能が使えません。そのため、macOS/Windows版gimicDispを作成しました。その後MIDI機能はリリースされましたが、元々LCD用の設計だっただけに、PCでの使用に必ずしも最適ではないUXであるPC版の方が多く利用されている状況を何とかしたいと思い、gimicDispのMCU版を作成する事にしました。
 
 ## 動作確認済みコンポーネント
 Raspberry Pi Pico
