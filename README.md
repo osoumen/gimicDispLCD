@@ -1,5 +1,6 @@
 # gimicDisp LCD
-多連装音源システムG.I.M.I.Cを完全なスタンドアロン動作させるためには専用液晶ユニット(GMC-OPT03)が必要です。既に生産が終了した液晶ユニットの代替品を、汎用のSPI/8bitパラレル液晶を利用して製作します。G.I.M.I.C専用液晶ユニットのエミュレーション機能+拡張機能がArduino IDEに対応した32-bitプロセッサ上で動作します。G.I.M.I.Cの液晶ユニットの仕様をアーカイブする事、また現存ユーザーが今後も液晶ユニットを作成可能にする事を目的としています。macOS/Windows版gimicDispの汎用MCU版という側面もあります。
+多連装音源システムG.I.M.I.Cを完全なスタンドアロン動作させるためには専用液晶ユニット(GMC-OPT03)が必要です。既に生産が終了している液晶ユニットの代替品を、汎用のSPI/8bitパラレル液晶を利用して製作します。G.I.M.I.C専用液晶ユニットのエミュレーション機能+拡張機能がArduino IDEに対応した32-bitプロセッサ上で動作します。G.I.M.I.Cの液晶ユニットの仕様をアーカイブする事、また現存ユーザーが今後も液晶ユニットを作成可能にする事を目的としています。macOS/Windows版gimicDispの汎用MCU版という側面もあります。
+
 [![demo1](http://img.youtube.com/vi/dbhGN2k-tNY/sddefault.jpg)](https://youtube.com/shorts/dbhGN2k-tNY "demo1")
 [![demo2](http://img.youtube.com/vi/MyW-M7hi9lc/sddefault.jpg)](https://youtube.com/shorts/MyW-M7hi9lc "demo2")
 
@@ -113,7 +114,8 @@ G.I.M.I.Cの接続が無い状態ではLCDのバックライトが消灯しま�
 再度行いたい場合は、ボタン１を押しながら起動してください。
 ボタンを使用できない場合は、ボード上のフラッシュメモリを初期化する事で再度キャリブレーションを行えます。
 https://www.raspberrypi.com/documentation/microcontrollers/raspberry-pi-pico.html#software-utilities
-ロータリーエンコーダーのピンを有効化している場合は、次の画面で、クリック数、方向の設定を行います。
+
+ロータリーエンコーダーのピンを有効化している場合は、初回に設定画面が出てきます。使用する機種に合わせて、クリック数、回転方向の設定を行ってください。
 この設定は、RENC_CLICKS_PER_PULSEを定義するとスキップできます。
 再度行いたい場合は、ボタン２を押しながら起動してください。
 
@@ -121,18 +123,21 @@ Raspberry Pi Picoの場合、G.I.M.I.CがLCDを認識するとボード上のLED
 
 USB HIDデバイスを使用する場合は市販のOTGケーブルを用いて接続してください。
 
-## 配線例
+## ビルド済みバイナリ向け配線例
 
 ### Raspberry Pi Pico + PicoResTouch-LCD-2.8(ST7789)
-詳細はuser_config/rpipico_PicoResTouch_2_8.h を参照してください。
+examples/gimicDisp_LCD_rpipico_PicoResTouch_2_8.uf2 を使用する場合の配線例です。
+ビルド内容の詳細はuser_config/rpipico_PicoResTouch_2_8.h を参照してください。
 ![rpipico_PicoResTouch_2_8](examples/rpipico_PicoResTouch_2_8.png)
 
 ### Raspberry Pi Pico + ILI9341(SPI)
-詳細はuser_config/rpipico_ILI9341_spi.h を参照してください。
+examples/gimicDisp_LCD_rpipico_ILI9341_spi.uf2 を使用する場合の配線例です。
+ビルド内容の詳細はuser_config/rpipico_ILI9341_spi.h を参照してください。
 ![rpipico_PicoResTouch_2_8](examples/rpipico_ILI9341_spi.png)
 
 ### Raspberry Pi Pico + ILI9341(8bit Parallel)
-詳細はuser_config/rpipico_ILI9341_parallel.h を参照してください。
+examples/gimicDisp_LCD_rpipico_ILI9341_parallel.uf2 を使用する場合の配線例です。
+ビルド内容の詳細はuser_config/rpipico_ILI9341_parallel.h を参照してください。
 ![rpipico_PicoResTouch_2_8](examples/rpipico_ILI9341_parallel.png)
 
 ## なぜ作ったのか？
